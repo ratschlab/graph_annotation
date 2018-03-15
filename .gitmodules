@@ -1,0 +1,9 @@
+[submodule "external-libraries/libmaus2"]
+	path = external-libraries/libmaus2
+	url = https://github.com/akahles/libmaus2.git
+[submodule "external-libraries/sdsl-lite"]
+	path = external-libraries/sdsl-lite
+	url = https://github.com/simongog/sdsl-lite.git
+[submodule "external-libraries/rollinghashcpp"]
+	path = external-libraries/rollinghashcpp
+	url = https://github.com/hmusta/rollinghashcpp
