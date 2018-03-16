@@ -45,6 +45,13 @@ namespace utils {
     std::deque<std::string> generate_strings(const std::string &alphabet,
                                              size_t length);
 
+    uint64_t deserializeNumber(std::istream &in);
+
+    uint64_t serializeNumber(std::ostream &out, uint64_t const n);
+
+    template<typename N>
+    uint64_t serializeNumberVector(std::ostream &out, std::vector<N> const &v);
+
 } // namespace utils
 
 #endif // __UTILS_HPP__

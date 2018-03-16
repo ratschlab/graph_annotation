@@ -24,12 +24,10 @@ set(CMAKE_VERBOSE_MAKEFILE 1)
 cmake_policy(SET CMP0015 NEW)
 
 link_directories(
-  ../external-libraries/libmaus2/lib
   ../external-libraries/sdsl-lite/lib
 )
 
 include_directories(
-  ../external-libraries/libmaus2/include
   ../external-libraries/sdsl-lite/include
   ../external-libraries/rollinghashcpp
 )
@@ -47,7 +45,6 @@ add_dependencies(annograph metagraph)
 
 set(METALIBS
   -lhts -lz -lbz2
-  -lmaus2 -lmaus2_simd_align_128 -lmaus2_simd_align_256
   -lsdsl -ldivsufsort -ldivsufsort64
   -lssl -lcrypto -llzma -lboost_serialization
 )

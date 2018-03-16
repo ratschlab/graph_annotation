@@ -1,8 +1,6 @@
 #ifndef __DBG_BLOOM_ANNOTATOR_HPP__
 #define __DBG_BLOOM_ANNOTATOR_HPP__
 
-#include <libmaus2/util/NumberSerialisation.hpp>
-
 #include "hashers.hpp"
 
 

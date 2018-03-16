@@ -1,4 +1,5 @@
 #include "dbg_bloom_annotator.hpp"
+#include "utils.hpp"
 
 #include <fstream>
 #include <cmath>
@@ -27,10 +28,12 @@ void PreciseAnnotator::load(const std::string &filename) {
 }
 
 void PreciseAnnotator::export_rows(std::ostream &out) const {
-    libmaus2::util::NumberSerialisation::serialiseNumber(out, annotation_exact.kmer_map_.size());
+    //libmaus2::util::NumberSerialisation::serialiseNumber(out, annotation_exact.kmer_map_.size());
+    utils::serializeNumber(out, annotation_exact.kmer_map_.size());
     for (auto &kmer : annotation_exact.kmer_map_) {
         auto annot = annotation_from_kmer(kmer.first);
-        libmaus2::util::NumberSerialisation::serialiseNumberVector(out, annot);
+        //libmaus2::util::NumberSerialisation::serialiseNumberVector(out, annot);
+        utils::serializeNumberVector(out, annot);
     }
 }
 

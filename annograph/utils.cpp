@@ -1,5 +1,6 @@
 #include "utils.hpp"
 
+#include <iostream>
 #include <fstream>
 #include <algorithm>
 #include <array>
@@ -53,6 +54,43 @@ std::deque<std::string> generate_strings(const std::string &alphabet,
     }
     assert(suffices.size() == std::pow(alphabet.size(), length));
     return suffices;
+}
+
+//These next functions borrowed from libmaus2
+uint64_t deserializeNumber(std::istream &in) {
+   uint64_t n = 0;
+    for (size_t i = 0; i < sizeof(n); ++i) {
+        n = (n << 8) | in.get();
+    }
+    return n;
+}
+
+uint64_t serializeNumber(std::ostream &out, uint64_t const n) {
+    out.put((n >> (7 * 8)) & 0xFF);
+    out.put((n >> (6 * 8)) & 0xFF);
+    out.put((n >> (5 * 8)) & 0xFF);
+    out.put((n >> (4 * 8)) & 0xFF);
+    out.put((n >> (3 * 8)) & 0xFF);
+    out.put((n >> (2 * 8)) & 0xFF);
+    out.put((n >> (1 * 8)) & 0xFF);
+    out.put((n >> (0 * 8)) & 0xFF);
+
+    if (!out) {
+        std::cerr << "Serialization failure" << std::endl;
+        exit(1);
+    }
+
+    return 8;
+}
+
+template<typename N>
+uint64_t serializeNumberVector(std::ostream &out, std::vector<N> const &v) {
+    uint64_t  s = 0;
+    s += serializeNumber(out, v.size());
+    for (auto &n : v) {
+        s += serializeNumber(out, n);
+    }
+    return s;
 }
 
 } // namespace utils
