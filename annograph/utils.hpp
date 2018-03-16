@@ -49,8 +49,7 @@ namespace utils {
 
     uint64_t serializeNumber(std::ostream &out, uint64_t const n);
 
-    template<typename N>
-    uint64_t serializeNumberVector(std::ostream &out, std::vector<N> const &v);
+    uint64_t serializeNumberVector(std::ostream &out, std::vector<uint64_t> const &v);
 
 } // namespace utils
 

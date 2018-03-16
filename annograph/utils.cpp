@@ -83,8 +83,7 @@ uint64_t serializeNumber(std::ostream &out, uint64_t const n) {
     return 8;
 }
 
-template<typename N>
-uint64_t serializeNumberVector(std::ostream &out, std::vector<N> const &v) {
+uint64_t serializeNumberVector(std::ostream &out, std::vector<uint64_t> const &v) {
     uint64_t  s = 0;
     s += serializeNumber(out, v.size());
     for (auto &n : v) {
