@@ -1,5 +1,4 @@
 #include <random>
-#include <sdsl/wavelet_trees.hpp>
 
 #include "gtest/gtest.h"
 #include "dbg_bloom_annotator.hpp"
@@ -9,9 +8,14 @@ const std::string test_data_dir = "../tests/data";
 const std::string test_dump_basename = test_data_dir + "/dump_test";
 const size_t num_random_kmers = 1000;
 
+struct uint256_t {
+    uint64_t m_lo;
+    uint64_t m_mid;
+    __uint128_t m_high;
+};
 
-std::vector<sdsl::uint256_t> generate_kmers(size_t num) {
-    std::vector<sdsl::uint256_t> kmers(num);
+std::vector<uint256_t> generate_kmers(size_t num) {
+    std::vector<uint256_t> kmers(num);
     int mod = pow(num, 0.25);
     for (size_t i = 0; i < kmers.size(); ++i) {
         *(reinterpret_cast<uint64_t*>(&kmers[i]))     = rand() % mod;

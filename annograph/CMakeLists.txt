@@ -24,11 +24,9 @@ set(CMAKE_VERBOSE_MAKEFILE 1)
 cmake_policy(SET CMP0015 NEW)
 
 link_directories(
-  ../external-libraries/sdsl-lite/lib
 )
 
 include_directories(
-  ../external-libraries/sdsl-lite/include
   ../external-libraries/rollinghashcpp
 )
 
@@ -45,7 +43,6 @@ add_dependencies(annograph annographlibs)
 
 set(METALIBS
   -lhts -lz -lbz2
-  -lsdsl -ldivsufsort -ldivsufsort64
   -lssl -lcrypto -llzma -lboost_serialization
 )
 
@@ -106,6 +103,6 @@ link_directories(
 add_executable(unit_tests ${unit_tests_files})
 add_dependencies(unit_tests annographlibs)
 
-target_link_libraries(unit_tests -lgtest_main -lgtest annographlibs ${METALIBS})
+target_link_libraries(unit_tests gtest_main gtest annographlibs ${METALIBS})
 
 add_test(NAME unit_tests COMMAND unit_tests)
