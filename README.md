@@ -34,3 +34,9 @@ Build types: `cmake .. <arguments>` where arguments are:
 2. Compress annotation with Bloom filters  
 `./annograph build -i <OUTPREFIXX> -o <BLOOMOUTPREFIX> <FLAGS> <INPUTS>`
 3. Compress annotation with wavelet tries (see [README](./wavelet_trie/README.md) in wavelet_trie folder)
+
+## bioRxiv preprint
+
+This code was used to produce the results in the bioRxiv preprint, _[Dynamic compression schemes for graph coloring](https://www.biorxiv.org/content/early/2018/03/17/239806)_ by Harun Mustafa, Ingo Schilken, Mikhail Karasikov, Carsten Eickhoff, Gunnar Ratsch, and Andre Kahles. 
+
+The input data used for those experiments is located [here](https://public.bmi.inf.ethz.ch/projects/2018/graph-anno/).
