@@ -6,13 +6,13 @@ Prerequisites
 - cmake 3.6.1
 - C++14
 - HTSlib
-- sdsl-lite
 - GNU GMP (wavelet trie only)
 
 ### Install
 
 1. `git clone --recursive https://github.com/ratschlab/graph_annotation`
-2. install **sdsl-lite** in `graph_annotation/external-libraries` following the corresponding instructions
+2. install **sdsl-lite** in `graph_annotation/external-libraries` following the corresponding instructions.  
+Run `./install.sh $(pwd)` from the `graph_annotation/external-libraries/sdsl-lite` directory.
 3. go to the **build** directory `mkdir -p annograph/build && cd annograph/build`
 4. compile by `cmake .. && make && ./unit_tests`
 
