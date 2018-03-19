@@ -17,6 +17,9 @@
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/archive/impl/basic_binary_oprimitive.ipp>
 #include <boost/archive/impl/basic_binary_iprimitive.ipp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 
 namespace annotate {
 

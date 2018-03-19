@@ -28,11 +28,9 @@ void PreciseAnnotator::load(const std::string &filename) {
 }
 
 void PreciseAnnotator::export_rows(std::ostream &out) const {
-    //libmaus2::util::NumberSerialisation::serialiseNumber(out, annotation_exact.kmer_map_.size());
     utils::serializeNumber(out, annotation_exact.kmer_map_.size());
     for (auto &kmer : annotation_exact.kmer_map_) {
         auto annot = annotation_from_kmer(kmer.first);
-        //libmaus2::util::NumberSerialisation::serialiseNumberVector(out, annot);
         utils::serializeNumberVector(out, annot);
     }
 }
@@ -374,7 +372,9 @@ BloomAnnotator::kmer_from_index(DeBruijnGraphWrapper::edge_index index) const {
     return graph_.get_node_kmer(index) + graph_.get_edge_label(index);
 }
 
-std::vector<size_t> get_annotation_exact(const PreciseAnnotator &annotation_exact, DeBruijnGraphWrapper::edge_index i, std::string &int_kmer) {
+std::vector<uint64_t> get_annotation_exact(const PreciseAnnotator &annotation_exact,
+                                           DeBruijnGraphWrapper::edge_index i,
+                                           const std::string &int_kmer) {
     ++i;
     return annotation_exact.annotation_from_kmer(int_kmer);
 }

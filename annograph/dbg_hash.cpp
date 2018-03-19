@@ -1,6 +1,8 @@
 #include "dbg_hash.hpp"
 
+
 const std::string kAlphabet = "ACGTN$";
+
 
 void DBGHash::serialize(const std::string &filename) const {
     std::ofstream out(filename);

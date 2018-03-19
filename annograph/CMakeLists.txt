@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.6.1)
-project(MetaGenGraph)
+project(AnnoGraph)
 
 enable_testing()
 
@@ -39,9 +39,9 @@ file(GLOB src_files "*.cpp" "*.h" "*.hpp")
 list(FILTER src_files EXCLUDE REGEX ".*\\._.*")
 list(FILTER src_files EXCLUDE REGEX ".*main.cpp")
 
-add_library(metagraph STATIC ${src_files})
+add_library(annographlibs STATIC ${src_files})
 add_executable(annograph "annotation_main.cpp")
-add_dependencies(annograph metagraph)
+add_dependencies(annograph annographlibs)
 
 set(METALIBS
   -lhts -lz -lbz2
@@ -55,7 +55,7 @@ if(BUILD_STATIC)
 endif()
 
 target_link_libraries(
-  annograph metagraph ${METALIBS}
+  annograph annographlibs ${METALIBS}
 )
 
 
@@ -104,29 +104,8 @@ link_directories(
 )
 
 add_executable(unit_tests ${unit_tests_files})
-add_dependencies(unit_tests metagraph)
+add_dependencies(unit_tests annographlibs)
 
-target_link_libraries(unit_tests -lgtest_main -lgtest metagraph ${METALIBS})
+target_link_libraries(unit_tests -lgtest_main -lgtest annographlibs ${METALIBS})
 
 add_test(NAME unit_tests COMMAND unit_tests)
-
-
-#-------------------
-# Python interfaces
-#-------------------
-if(PYTHON_INTERFACE)
-  FIND_PACKAGE(SWIG REQUIRED)
-  INCLUDE(${SWIG_USE_FILE})
-
-  FIND_PACKAGE(PythonLibs)
-  INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
-
-  SET(CMAKE_SWIG_FLAGS "")
-
-  file(GLOB interface_files "interfaces/*.i")
-
-  SET_SOURCE_FILES_PROPERTIES(${interface_files} PROPERTIES CPLUSPLUS ON)
-
-  SWIG_ADD_LIBRARY(metagraph LANGUAGE python SOURCES ${interface_files})
-  SWIG_LINK_LIBRARIES(metagraph metagraph ${METALIBS} ${PYTHON_LIBRARIES})
-endif()

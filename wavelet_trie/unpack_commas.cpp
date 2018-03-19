@@ -5,10 +5,18 @@
 #include <cassert>
 #include <algorithm>
 #include <cstdlib>
+#include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
-#include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/vector.hpp>
 #include <boost/serialization/set.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/archive/impl/basic_binary_oprimitive.ipp>
+#include <boost/archive/impl/basic_binary_iprimitive.ipp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 #include "wavelet_trie.hpp"
+
 
 int main(int argc, char **argv) {
     if (argc < 3)

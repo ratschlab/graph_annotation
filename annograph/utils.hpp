@@ -8,8 +8,6 @@
 
 namespace utils {
 
-    uint64_t kFromFile(const std::string &infbase);
-
     /**
      *  This function checks whether two given strings are identical.
      */
@@ -41,9 +39,6 @@ namespace utils {
     }
 
     std::string get_filetype(const std::string &fname);
-
-    std::deque<std::string> generate_strings(const std::string &alphabet,
-                                             size_t length);
 
     uint64_t deserializeNumber(std::istream &in);
 

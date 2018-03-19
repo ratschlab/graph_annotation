@@ -3,10 +3,6 @@
 
 #include <fstream>
 #include <unordered_map>
-#include <boost/serialization/serialization.hpp>
-#include <boost/serialization/unordered_map.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
 
 #include "dbg_bloom_annotator.hpp"
 

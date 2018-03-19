@@ -237,7 +237,7 @@ namespace annotate {
             if (count) {
                 j = ((i + 63) & -64llu);
                 //WARNING: the region from merged.size() to j is not initialized
-                merged.set_int(i, 0, std::min(j, merged.size()) - i);
+                merged.set_int(i, 0, std::min(j, static_cast<size_t>(merged.size())) - i);
                 std::fill(merged.data() + (j >> 6), merged.data() + (merged.capacity() >> 6), 0);
             }
         } else {
