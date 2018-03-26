@@ -280,7 +280,7 @@ int main(int argc, const char *argv[]) {
         hashing_graph.serialize(config->outfbase + ".graph.dbg");
     }
     if (!config->outfbase.empty() && annotator)
-        annotator->serialize(config->outfbase);
+        annotator->serialize(config->outfbase + ".anno.dbg");
 
     if (!config->outfbase.empty() && precise_annotator && config->infbase.empty()) {
         std::cout << "Serializing precise annotation...\t" << std::flush;
