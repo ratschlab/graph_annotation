@@ -1,8 +1,18 @@
 #include "hashers.hpp"
+
+#include <fstream>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/set.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/archive/impl/basic_binary_oprimitive.ipp>
+#include <boost/archive/impl/basic_binary_iprimitive.ipp>
+
 #include "cyclichash.h"
 
 
-namespace annotate {
+namespace hash_annotate {
 
 std::vector<uint64_t> merge_or(const std::vector<uint64_t> &a,
                                const std::vector<uint64_t> &b) {
@@ -123,7 +133,8 @@ CyclicHashIterator::CyclicHashIterator(const char *begin, const char *end,
       : hasher_(begin, k, num_hash),
         next_(begin + k),
         end_(end) {
-    assert(next_ < end_ || (next_ == end_ && !is_end()) || (is_end() && next_ > end_));
+    assert(begin <= end);
+    assert((begin + k > end) == is_end());
 }
 
 CyclicHashIterator::CyclicHashIterator(const std::string &sequence,
@@ -222,5 +233,29 @@ double BloomFilter::occupancy() const {
     return static_cast<double>(count) / (bits.size() * 64);
 }
 
+void ExactHashAnnotation::serialize(std::ostream &out) const {
+    boost::archive::binary_oarchive oarch(out);
+    oarch & kmer_map_;
+    oarch & num_columns_;
+}
 
-} // namespace annotate
+void ExactHashAnnotation::serialize(const std::string &filename) const {
+    std::ofstream fout(filename);
+    serialize(fout);
+    fout.close();
+}
+
+void ExactHashAnnotation::load(std::istream &in) {
+    boost::archive::binary_iarchive iarch(in);
+    iarch & kmer_map_;
+    iarch & num_columns_;
+}
+
+void ExactHashAnnotation::load(const std::string &filename) {
+    std::ifstream fin(filename);
+    load(fin);
+    fin.close();
+}
+
+
+} // namespace hash_annotate

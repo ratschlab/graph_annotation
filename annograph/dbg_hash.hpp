@@ -7,7 +7,7 @@
 #include "dbg_bloom_annotator.hpp"
 
 
-class DBGHash : public annotate::DeBruijnGraphWrapper {
+class DBGHash : public hash_annotate::DeBruijnGraphWrapper {
   public:
     DBGHash(const size_t k) : k_(k) {}
 

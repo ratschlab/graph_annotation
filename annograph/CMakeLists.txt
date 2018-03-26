@@ -27,19 +27,21 @@ link_directories(
 )
 
 include_directories(
+  bloom_annotator
   ../external-libraries/rollinghashcpp
 )
 
-#add_subdirectory()
+add_subdirectory(
+  bloom_annotator
+)
 
-file(GLOB src_files "*.cpp" "*.h" "*.hpp")
+file(GLOB src_files "*.cpp")
 
 list(FILTER src_files EXCLUDE REGEX ".*\\._.*")
 list(FILTER src_files EXCLUDE REGEX ".*main.cpp")
 
 add_library(annographlibs STATIC ${src_files})
 add_executable(annograph "annotation_main.cpp")
-add_dependencies(annograph annographlibs)
 
 set(METALIBS
   -lhts -lz -lbz2
@@ -50,6 +52,10 @@ if(BUILD_STATIC)
   set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} -static)
   set(METALIBS ${METALIBS} -lcurl)
 endif()
+
+target_link_libraries(
+  annographlibs bloom_annotator ${METALIBS}
+)
 
 target_link_libraries(
   annograph annographlibs ${METALIBS}
@@ -101,7 +107,6 @@ link_directories(
 )
 
 add_executable(unit_tests ${unit_tests_files})
-add_dependencies(unit_tests annographlibs)
 
 target_link_libraries(unit_tests gtest_main gtest annographlibs ${METALIBS})
 

@@ -1,7 +1,9 @@
 #include <fstream>
 #include <ctime>
-#include <zlib.h>
 #include <map>
+#include <memory>
+
+#include <zlib.h>
 
 #include "dbg_hash.hpp"
 #include "config.hpp"
@@ -44,14 +46,14 @@ int main(int argc, const char *argv[]) {
         exit(1);
     }
 
-    annotate::BloomAnnotator *annotator = NULL;
-    annotate::PreciseAnnotator *precise_annotator = NULL;
+    hash_annotate::BloomAnnotator *annotator = NULL;
+    hash_annotate::PreciseHashAnnotator *precise_annotator = NULL;
 
     double graph_const_time = 0;
     double precise_const_time = 0;
     Timer result_timer;
     DBGHash hashing_graph(config->k);
-    precise_annotator = new annotate::PreciseAnnotator(hashing_graph);
+    precise_annotator = new hash_annotate::PreciseHashAnnotator(hashing_graph);
     std::unordered_map<std::string, size_t> annot_map;
     if (!config->infbase.empty()) {
         result_timer.reset();
@@ -68,14 +70,14 @@ int main(int argc, const char *argv[]) {
             || config->bloom_num_hash_functions > 0) {
         if (config->bloom_fpp > -0.5) {
             // Expected FPP is set, optimize other parameters automatically
-            annotator = new annotate::BloomAnnotator(hashing_graph,
-                                                     config->bloom_fpp,
-                                                     config->verbose);
+            annotator = new hash_annotate::BloomAnnotator(hashing_graph,
+                                                          config->bloom_fpp,
+                                                          config->verbose);
         } else {
             assert(config->bloom_bits_per_edge >= 0);
             // Experiment mode, estimate FPP given other parameters,
             // optimize the number of hash functions if it's set to zero
-            annotator = new annotate::BloomAnnotator(
+            annotator = new hash_annotate::BloomAnnotator(
                 hashing_graph,
                 config->bloom_bits_per_edge,
                 config->bloom_num_hash_functions,

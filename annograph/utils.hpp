@@ -1,10 +1,8 @@
 #ifndef __UTILS_HPP__
 #define __UTILS_HPP__
 
-#include <cstdint>
 #include <string>
-#include <vector>
-#include <deque>
+
 
 namespace utils {
 
@@ -39,12 +37,6 @@ namespace utils {
     }
 
     std::string get_filetype(const std::string &fname);
-
-    uint64_t deserializeNumber(std::istream &in);
-
-    uint64_t serializeNumber(std::ostream &out, uint64_t const n);
-
-    uint64_t serializeNumberVector(std::ostream &out, std::vector<uint64_t> const &v);
 
 } // namespace utils
 
