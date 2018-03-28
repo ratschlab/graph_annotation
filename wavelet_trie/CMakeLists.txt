@@ -24,11 +24,11 @@ set(CMAKE_VERBOSE_MAKEFILE 1)
 cmake_policy(SET CMP0015 NEW)
 
 link_directories(
-  ../external-libraries/sdsl-lite/lib
+  external-libraries/sdsl-lite/lib
 )
 
 include_directories(
-  ../external-libraries/sdsl-lite/include
+  external-libraries/sdsl-lite/include
 )
 
 #add_subdirectory()

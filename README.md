@@ -11,10 +11,8 @@ Prerequisites
 ### Install
 
 1. `git clone --recursive https://github.com/ratschlab/graph_annotation`
-2. install **sdsl-lite** in `graph_annotation/external-libraries` following the corresponding instructions.  
-Run `./install.sh $(pwd)` from the `graph_annotation/external-libraries/sdsl-lite` directory.
-3. go to the **build** directory `mkdir -p annograph/build && cd annograph/build`
-4. compile by `cmake .. && make && ./unit_tests`
+2. go to the **build** directory `mkdir -p annograph/build && cd annograph/build`
+3. compile by `cmake .. && make && ./unit_tests`
 
 Build types: `cmake .. <arguments>` where arguments are:
 
@@ -23,9 +21,7 @@ Build types: `cmake .. <arguments>` where arguments are:
 
 ##### Install wavelet trie compressor
 
-0. `cd graph_annotation/wavelet_trie/`
-1. `mkdir -p build && cd build`
-2. `cmake .. && make`
+See [README](./wavelet_trie/README.md) in wavelet_trie folder.
 
 ### Typical workflow
 

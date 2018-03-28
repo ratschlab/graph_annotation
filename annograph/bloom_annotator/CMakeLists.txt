@@ -3,6 +3,10 @@ add_library(bloom_annotator STATIC
   hashers.cpp
 )
 
+include_directories(
+  external-libraries/rollinghashcpp
+)
+
 target_include_directories(bloom_annotator PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
 )

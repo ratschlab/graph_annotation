@@ -7,9 +7,10 @@ Multithreaded wavelet trie construction library
 3. sdsl-lite
 
 ## Install
-0. Compile external libraries (see README in parent directory)
-1. `mkdir -p build && cd build`
-2. `cmake .. && make`
+1. install **sdsl-lite** in `wavelet_trie/external-libraries` following the corresponding instructions.  
+Run `./install.sh $(pwd)` from the `wavelet_trie/external-libraries/sdsl-lite` directory.
+2. Run `mkdir -p build && cd build` from the `wavelet_trie` directory.
+3. `cmake .. && make`
 
 ## Usage
 

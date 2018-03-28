@@ -28,7 +28,6 @@ link_directories(
 
 include_directories(
   bloom_annotator
-  ../external-libraries/rollinghashcpp
 )
 
 add_subdirectory(
