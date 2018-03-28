@@ -357,7 +357,7 @@ class HashAnnotation {
         }
         if (!hasher) {
             hasher = new Hasher(reinterpret_cast<const char*>(begin),
-                                (end - begin) * sizeof(T),
+                                static_cast<size_t>(end - begin) * sizeof(T),
                                 num_hash_functions_);
         }
         return hasher->get_hash();
@@ -405,12 +405,12 @@ class ExactHashAnnotation {
     }
 
     std::vector<uint64_t> insert(const std::string &kmer, size_t i) {
-        if (i < -1llu) {
+        if (i < static_cast<size_t>(-1)) {
             num_columns_ = std::max(num_columns_, i + 1);
         }
         std::vector<uint64_t> annot((num_columns_ + 63) >> 6, 0);
         auto &indices = kmer_map_[kmer];
-        if (i < -1llu) {
+        if (i < static_cast<size_t>(-1)) {
             indices.insert(i);
         }
         for (auto &index : indices) {

@@ -135,7 +135,7 @@ bool vcf_parser::read_next_line() {
     curi = 0;
     bcf_unpack(rec_, BCF_UN_FLT);
 
-    uint32_t ref_callele_l = strlen(rec_->d.allele[0]);
+    int ref_callele_l = static_cast<int>(strlen(rec_->d.allele[0]));
     int len;
     auto first = faidx_fetch_seq(reference_,
                                hdr_->id[BCF_DT_CTG][rec_->rid].key,

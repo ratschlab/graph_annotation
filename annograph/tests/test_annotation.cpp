@@ -16,12 +16,11 @@ struct uint256_t {
 
 std::vector<uint256_t> generate_kmers(size_t num) {
     std::vector<uint256_t> kmers(num);
-    int mod = pow(num, 0.25);
     for (size_t i = 0; i < kmers.size(); ++i) {
-        *(reinterpret_cast<uint64_t*>(&kmers[i]))     = rand() % mod;
-        *(reinterpret_cast<uint64_t*>(&kmers[i]) + 1) = rand() % mod;
-        *(reinterpret_cast<uint64_t*>(&kmers[i]) + 2) = rand() % mod;
-        *(reinterpret_cast<uint64_t*>(&kmers[i]) + 3) = rand() % mod;
+        *(reinterpret_cast<uint64_t*>(&kmers[i]))     = rand();
+        *(reinterpret_cast<uint64_t*>(&kmers[i]) + 1) = rand();
+        *(reinterpret_cast<uint64_t*>(&kmers[i]) + 2) = rand();
+        *(reinterpret_cast<uint64_t*>(&kmers[i]) + 3) = rand();
     }
     return kmers;
 }

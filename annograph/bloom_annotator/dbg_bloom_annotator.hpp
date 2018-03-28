@@ -55,7 +55,7 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     PreciseHashAnnotator(const DeBruijnGraphWrapper &graph) : graph_(graph) {}
 
     void add_sequence(const std::string &sequence,
-                      size_t column = -1llu,
+                      size_t column = static_cast<size_t>(-1),
                       bool rooted = false);
 
     void add_column(const std::string &sequence, bool rooted = false);

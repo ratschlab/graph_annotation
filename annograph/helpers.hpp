@@ -41,7 +41,7 @@ void reverse_complement(const Iterator &begin, const Iterator &end) {
      'p', 'q', 'y', 's', 'a', 'a', 'b', 'w', 'x', 'r', 'z', 123, 124, 125, 126, 127
     };
 
-    int c0, c1;
+    char c0, c1;
     for (int64_t i = 0; i < ((end - begin) >> 1); ++i) {
         c0 = comp_tab[static_cast<int>(*(begin + i))];
         c1 = comp_tab[static_cast<int>(*(end - 1 - i))];

@@ -76,7 +76,7 @@ void PreciseHashAnnotator::add_sequence(const std::string &sequence,
     if (preprocessed_seq.size() < graph_.get_k() + 1)
         return;
 
-    if (column < -1llu && column >= annotation_exact.size())
+    if (column < static_cast<size_t>(-1) && column >= annotation_exact.size())
         annotation_exact.resize(column + 1);
 
     for (size_t i = 0; i + graph_.get_k() < preprocessed_seq.size(); ++i) {

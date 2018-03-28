@@ -14,6 +14,9 @@
 
 namespace hash_annotate {
 
+typedef CyclicHash<uint64_t, unsigned char> CyclicHasher_;
+
+
 std::vector<uint64_t> merge_or(const std::vector<uint64_t> &a,
                                const std::vector<uint64_t> &b) {
     assert(a.size() == b.size() && "ORing different sizes");
@@ -40,7 +43,7 @@ std::vector<uint64_t> merge_and(const std::vector<uint64_t> &a,
 uint64_t popcount(const std::vector<uint64_t> &a) {
     uint64_t popcount = 0;
     for (auto value : a) {
-        popcount += static_cast<size_t>(__builtin_popcountll(value));
+        popcount += static_cast<uint64_t>(__builtin_popcountll(value));
     }
     return popcount;
 }
@@ -70,7 +73,6 @@ void print(const std::vector<uint64_t> &a) {
     std::cout << "\n";
 }
 
-typedef CyclicHash<uint64_t, unsigned char> CyclicHasher_;
 //CyclicHash
 CyclicMultiHash::CyclicMultiHash(const char *data, size_t k, size_t num_hash)
       : hashes_(num_hash),
@@ -228,9 +230,9 @@ bool BloomFilter::operator==(const BloomFilter &a) const {
 }
 
 double BloomFilter::occupancy() const {
-    size_t count = 0;
+    uint64_t count = 0;
     for (auto it = bits.begin(); it != bits.end(); ++it) {
-        count += static_cast<size_t>(__builtin_popcountll(*it));
+        count += static_cast<uint64_t>(__builtin_popcountll(*it));
     }
     return static_cast<double>(count) / static_cast<double>(bits.size() * 64);
 }
