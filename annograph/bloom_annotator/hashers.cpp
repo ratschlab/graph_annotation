@@ -40,7 +40,7 @@ std::vector<uint64_t> merge_and(const std::vector<uint64_t> &a,
 uint64_t popcount(const std::vector<uint64_t> &a) {
     uint64_t popcount = 0;
     for (auto value : a) {
-        popcount += __builtin_popcountl(value);
+        popcount += static_cast<size_t>(__builtin_popcountll(value));
     }
     return popcount;
 }
@@ -70,7 +70,7 @@ void print(const std::vector<uint64_t> &a) {
     std::cout << "\n";
 }
 
-
+typedef CyclicHash<uint64_t, unsigned char> CyclicHasher_;
 //CyclicHash
 CyclicMultiHash::CyclicMultiHash(const char *data, size_t k, size_t num_hash)
       : hashes_(num_hash),
@@ -80,10 +80,12 @@ CyclicMultiHash::CyclicMultiHash(const char *data, size_t k, size_t num_hash)
         chashers_(num_hash, NULL) {
     assert(k_);
 
+    //TODO: check if k is too big to fit in int
+    //TODO: change CyclicHash template to use char instead of unsigned char
     for (uint32_t j = 0; j < hashes_.size(); ++j) {
-        auto *cyclic_hash = new CyclicHash<uint64_t>(k_, j, j + 1, 64lu);
+        auto *cyclic_hash = new CyclicHasher_(static_cast<int>(k_), j, j + 1, 64lu);
         for (size_t i = 0; i < k_; ++i) {
-            cyclic_hash->eat(data[i]);
+            cyclic_hash->eat(static_cast<unsigned char>(data[i]));
         }
         chashers_[j] = cyclic_hash;
         hashes_[j] = cyclic_hash->hashvalue;
@@ -92,7 +94,7 @@ CyclicMultiHash::CyclicMultiHash(const char *data, size_t k, size_t num_hash)
 
 CyclicMultiHash::~CyclicMultiHash() {
     for (size_t i = 0; i < chashers_.size(); ++i) {
-        delete reinterpret_cast<CyclicHash<uint64_t>*>(chashers_[i]);
+        delete reinterpret_cast<CyclicHasher_*>(chashers_[i]);
     }
 }
 
@@ -108,8 +110,8 @@ bool CyclicMultiHash::reinitialize(const char *data, size_t k, size_t num_hash) 
 
 void CyclicMultiHash::update(char next) {
     for (size_t i = 0; i < chashers_.size(); ++i) {
-        auto *cyclic_hash = reinterpret_cast<CyclicHash<uint64_t>*>(chashers_[i]);
-        cyclic_hash->update(cache_[begin_], next);
+        auto *cyclic_hash = reinterpret_cast<CyclicHasher_*>(chashers_[i]);
+        cyclic_hash->update(static_cast<unsigned char>(cache_[begin_]), static_cast<unsigned char>(next));
         hashes_[i] = cyclic_hash->hashvalue;
     }
     cache_[begin_] = next;
@@ -119,8 +121,8 @@ void CyclicMultiHash::update(char next) {
 void CyclicMultiHash::reverse_update(char prev) {
     begin_ = (begin_ == 0 ? cache_.size() - 1 : begin_ - 1);
     for (size_t i = 0; i < chashers_.size(); ++i) {
-        auto *cyclic_hash = reinterpret_cast<CyclicHash<uint64_t>*>(chashers_[i]);
-        cyclic_hash->reverse_update(prev, cache_[begin_]);
+        auto *cyclic_hash = reinterpret_cast<CyclicHasher_*>(chashers_[i]);
+        cyclic_hash->reverse_update(static_cast<unsigned char>(prev), static_cast<unsigned char>(cache_[begin_]));
         hashes_[i] = cyclic_hash->hashvalue;
     }
     cache_[begin_] = prev;
@@ -228,9 +230,9 @@ bool BloomFilter::operator==(const BloomFilter &a) const {
 double BloomFilter::occupancy() const {
     size_t count = 0;
     for (auto it = bits.begin(); it != bits.end(); ++it) {
-        count += __builtin_popcountll(*it);
+        count += static_cast<size_t>(__builtin_popcountll(*it));
     }
-    return static_cast<double>(count) / (bits.size() * 64);
+    return static_cast<double>(count) / static_cast<double>(bits.size() * 64);
 }
 
 void ExactHashAnnotation::serialize(std::ostream &out) const {

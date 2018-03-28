@@ -7,14 +7,14 @@
 namespace hash_annotate {
 
 uint64_t serializeNumber(std::ostream &out, uint64_t const n) {
-    out.put((n >> (7 * 8)) & 0xFF);
-    out.put((n >> (6 * 8)) & 0xFF);
-    out.put((n >> (5 * 8)) & 0xFF);
-    out.put((n >> (4 * 8)) & 0xFF);
-    out.put((n >> (3 * 8)) & 0xFF);
-    out.put((n >> (2 * 8)) & 0xFF);
-    out.put((n >> (1 * 8)) & 0xFF);
-    out.put((n >> (0 * 8)) & 0xFF);
+    out.put(static_cast<char>((n >> (7 * 8)) & 0xFF));
+    out.put(static_cast<char>((n >> (6 * 8)) & 0xFF));
+    out.put(static_cast<char>((n >> (5 * 8)) & 0xFF));
+    out.put(static_cast<char>((n >> (4 * 8)) & 0xFF));
+    out.put(static_cast<char>((n >> (3 * 8)) & 0xFF));
+    out.put(static_cast<char>((n >> (2 * 8)) & 0xFF));
+    out.put(static_cast<char>((n >> (1 * 8)) & 0xFF));
+    out.put(static_cast<char>((n >> (0 * 8)) & 0xFF));
 
     if (!out) {
         std::cerr << "Serialization failure" << std::endl;
@@ -171,11 +171,11 @@ void BloomAnnotator::add_sequence(const std::string &sequence, size_t column, si
         annotation.resize(column + 1);
 
     if (annotation[column].size() == 0) {
-        annotation[column].resize(
+        annotation[column].resize(static_cast<size_t>(
             bloom_size_factor_
-            * (num_elements ? num_elements : preprocessed_seq.size() - graph_.get_k())
+            * static_cast<double>(num_elements ? num_elements : preprocessed_seq.size() - graph_.get_k())
             + 1
-        );
+        ));
         if (annotation[column].size() == 0) {
             std::cerr << "ERROR: resize failed" << std::endl;
             exit(1);
@@ -327,10 +327,10 @@ void BloomAnnotator::test_fp_all(const PreciseAnnotator &annotation_exact,
     double fp_per_bit = 0;
     double fp_pre_per_bit = 0;
     double fn_per_bit = 0;
-    size_t fp = 0;
-    size_t fp_pre = 0;
-    size_t fn = 0;
-    size_t total = 0;
+    uint64_t fp = 0;
+    uint64_t fp_pre = 0;
+    uint64_t fn = 0;
+    uint64_t total = 0;
     assert(num);
     size_t step = std::max(
         static_cast<size_t>(1),
@@ -405,7 +405,7 @@ PreciseHashAnnotator::annotate_edge(DeBruijnGraphWrapper::edge_index i) const {
     return annotation_from_kmer(kmer_edge);
 }
 
-std::vector<size_t>
+std::vector<uint64_t>
 BloomAnnotator::test_fp(DeBruijnGraphWrapper::edge_index i,
                         const PreciseAnnotator &annotation_exact,
                         bool check_both_directions) const {
@@ -422,7 +422,7 @@ BloomAnnotator::test_fp(DeBruijnGraphWrapper::edge_index i,
     auto kt = test_exact.begin();
     auto lt = curannot.begin();
 
-    std::vector<size_t> stats(3, 0);
+    std::vector<uint64_t> stats(3, 0);
 
     for (; jt != test.end(); ++jt, ++kt, ++lt) {
         //check for false negatives
@@ -452,19 +452,19 @@ BloomAnnotator::test_fp(DeBruijnGraphWrapper::edge_index i,
         //false positives before correction
         if ((*jt | *kt) != *kt) {
             //stats[0] += __builtin_popcountll(*jt) - __builtin_popcountll(*kt);
-            stats[0] += __builtin_popcountll(*jt & (~(*kt)));
+            stats[0] += static_cast<uint64_t>(__builtin_popcountll(*jt & (~(*kt))));
         }
         //false positives after correction
         if ((*lt | *kt) != *kt) {
             //stats[1] += __builtin_popcountll(*lt) - __builtin_popcountll(*kt);
-            stats[1] += __builtin_popcountll(*lt & (~(*kt)));
+            stats[1] += static_cast<uint64_t>(__builtin_popcountll(*lt & (~(*kt))));
             if (verbose_)
                 std::cout << "FP: " << int_kmer << std::endl;
         }
         //false negatives after correction
         if ((*lt | *kt) != *lt) {
             //stats[2] += __builtin_popcountll(*lt | *kt) - __builtin_popcountll(*lt);
-            stats[2] += __builtin_popcountll(*kt & (~(*lt)));
+            stats[2] += static_cast<uint64_t>(__builtin_popcountll(*kt & (~(*lt))));
             if (verbose_) {
                 std::cout << "FN: " << int_kmer << std::endl;
                 auto unpacked_labels = unpack(test_exact);

@@ -55,7 +55,7 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     PreciseHashAnnotator(const DeBruijnGraphWrapper &graph) : graph_(graph) {}
 
     void add_sequence(const std::string &sequence,
-                      size_t column = -1,
+                      size_t column = -1llu,
                       bool rooted = false);
 
     void add_column(const std::string &sequence, bool rooted = false);
@@ -124,7 +124,7 @@ class BloomAnnotator {
 
     std::string kmer_from_index(DeBruijnGraphWrapper::edge_index index) const;
 
-    std::vector<size_t> test_fp(DeBruijnGraphWrapper::edge_index i,
+    std::vector<uint64_t> test_fp(DeBruijnGraphWrapper::edge_index i,
                                 const PreciseAnnotator &annotation_exact,
                                 bool check_both_directions = false) const;
 

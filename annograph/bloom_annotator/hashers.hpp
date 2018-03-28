@@ -347,9 +347,10 @@ class HashAnnotation {
 
     template <typename T>
     Hash compute_hash(const T *begin, const T *end) const {
+        assert(end >= begin);
         Hasher *&hasher = const_cast<Hasher*&>(hasher_);
         if (hasher && !hasher->reinitialize(reinterpret_cast<const char*>(begin),
-                                            (end - begin) * sizeof(T),
+                                            static_cast<size_t>(end - begin) * sizeof(T),
                                             num_hash_functions_)) {
             delete hasher;
             hasher = NULL;
@@ -396,8 +397,9 @@ class ExactHashAnnotation {
                 set_bit(annot, index);
             }
         } else {
-            if (it->second.find(i) != it->second.end())
-                set_bit(annot, i);
+            assert(i >= 0);
+            if (it->second.find(static_cast<size_t>(i)) != it->second.end())
+                set_bit(annot, static_cast<size_t>(i));
         }
         return annot;
     }
