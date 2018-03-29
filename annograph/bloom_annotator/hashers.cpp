@@ -201,7 +201,7 @@ void BloomFilter::serialize(std::ostream &out) const {
     oar & bits;
 }
 
-void BloomFilter::deserialize(std::istream &in) {
+void BloomFilter::load(std::istream &in) {
     in >> n_bits_;
     boost::archive::binary_iarchive iar(in);
     iar & bits;

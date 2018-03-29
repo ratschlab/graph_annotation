@@ -384,6 +384,16 @@ void BloomAnnotator::serialize(const std::string &filename) const {
     out.close();
 }
 
+void BloomAnnotator::load(std::istream &in) {
+    annotation.load(in);
+}
+
+void BloomAnnotator::load(const std::string &filename) {
+    std::ifstream in(filename);
+    load(in);
+    in.close();
+}
+
 std::vector<size_t>
 BloomAnnotator::unpack(const std::vector<uint64_t> &packed) {
     std::vector<size_t> labels;

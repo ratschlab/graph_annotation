@@ -149,7 +149,7 @@ class BloomFilter {
     bool insert(const MultiHash &multihash);
 
     void serialize(std::ostream &out) const;
-    void deserialize(std::istream &in);
+    void load(std::istream &in);
 
     bool operator==(const BloomFilter &a) const;
     bool operator!=(const BloomFilter &a) const { return !operator==(a); }
@@ -300,13 +300,13 @@ class HashAnnotation {
         }
     }
 
-    void deserialize(std::istream &in) {
+    void load(std::istream &in) {
         size_t size;
         //in >> size;
         in.read(reinterpret_cast<char*>(&size), sizeof(size));
         color_bits.resize(size);
         for (auto it = color_bits.begin(); it != color_bits.end(); ++it) {
-            it->deserialize(in);
+            it->load(in);
         }
     }
 

@@ -109,6 +109,10 @@ class BloomAnnotator {
 
     void serialize(const std::string &filename) const;
 
+    void load(std::istream &in);
+
+    void load(const std::string &filename);
+
     static std::vector<size_t> unpack(const std::vector<uint64_t> &packed);
 
     size_t num_hash_functions() const;
