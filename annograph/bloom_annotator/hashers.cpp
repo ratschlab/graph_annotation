@@ -196,14 +196,14 @@ bool BloomFilter::insert(const MultiHash &multihash) {
 }
 
 void BloomFilter::serialize(std::ostream &out) const {
-    out << n_bits_ << "\n";
     boost::archive::binary_oarchive oar(out);
+    oat & n_bits_;
     oar & bits;
 }
 
 void BloomFilter::load(std::istream &in) {
-    in >> n_bits_;
     boost::archive::binary_iarchive iar(in);
+    iar & n_bits_;
     iar & bits;
 }
 
