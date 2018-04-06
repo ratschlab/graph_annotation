@@ -1,4 +1,5 @@
 #include <random>
+#include <fstream>
 
 #include "gtest/gtest.h"
 #include "dbg_bloom_annotator.hpp"
@@ -54,6 +55,45 @@ TEST(Annotate, RandomTestNoFalseNegative) {
     }
     EXPECT_TRUE(total >= fp) << "Total: " << total << " FP: " << fp << std::endl;
 }
+
+TEST(Annotate, BloomSerialize) {
+    hash_annotate::BloomHashAnnotation bloom_anno;
+    hash_annotate::BloomFilter bloom(num_random_kmers);
+    //generate a bunch of kmers
+    auto kmers = generate_kmers(num_random_kmers);
+    for (size_t i = 0; i < kmers.size(); ++i) {
+        bloom.insert(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1));
+        ASSERT_TRUE(bloom.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+    }
+    std::ofstream outstream(test_dump_basename + "_bloomser");
+    bloom.serialize(outstream);
+    outstream.close();
+
+    std::ifstream instream(test_dump_basename + "_bloomser");
+    hash_annotate::BloomFilter bloom_alt(1);
+    bloom_alt.load(instream);
+    EXPECT_EQ(bloom, bloom_alt);
+}
+
+TEST(Annotate, BloomHashSerialize) {
+    hash_annotate::BloomHashAnnotation bloom_anno;
+    bloom_anno.append_bit(num_random_kmers);
+    //generate a bunch of kmers
+    auto kmers = generate_kmers(num_random_kmers);
+    for (size_t i = 0; i < kmers.size(); ++i) {
+        bloom_anno.insert(&kmers[i], &kmers[i] + 1, 0);
+        ASSERT_EQ(1, bloom_anno.find(&kmers[i], &kmers[i] + 1, 0)[0]);
+    }
+    std::ofstream outstream(test_dump_basename + "_bloomser");
+    bloom_anno.serialize(outstream);
+    outstream.close();
+
+    std::ifstream instream(test_dump_basename + "_bloomser");
+    hash_annotate::BloomHashAnnotation bloom_alt;
+    bloom_alt.load(instream);
+    EXPECT_EQ(bloom_anno, bloom_alt);
+}
+
 
 TEST(Annotate, RandomHashAnnotator) {
     hash_annotate::BloomHashAnnotation bloomhash(7);
