@@ -174,7 +174,7 @@ bool BloomFilter::find(const MultiHash &multihash) const {
             return false;
         }
     }
-    return true;
+    return static_cast<bool>(multihash.size());
     //return equal(merge_or(bits, annotate(hash, n_bits_)), bits);
 }
 
@@ -209,20 +209,20 @@ void BloomFilter::load(std::istream &in) {
 
 bool BloomFilter::operator==(const BloomFilter &a) const {
     if (n_bits_ != a.n_bits_) {
-        std::cerr << "Different number of bits\n";
-        std::cerr << n_bits_ << " " << a.n_bits_ << "\n";
+        //std::cerr << "Different number of bits\n";
+        //std::cerr << n_bits_ << " " << a.n_bits_ << "\n";
         return false;
     }
     if (bits.size() != a.bits.size()) {
-        std::cerr << "Different number of blocks\n";
-        std::cerr << bits.size() << " " << a.bits.size() << "\n";
+        //std::cerr << "Different number of blocks\n";
+        //std::cerr << bits.size() << " " << a.bits.size() << "\n";
         return false;
     }
     auto jt = a.bits.begin();
     for (auto it = bits.begin(); it != bits.end(); ++it, ++jt) {
         if (*it != *jt) {
-            std::cerr << "Different bits\n";
-            std::cerr << *it << " " << *jt << "\n";
+            //std::cerr << "Different bits\n";
+            //std::cerr << *it << " " << *jt << "\n";
             return false;
         }
     }

@@ -28,7 +28,7 @@ std::vector<uint256_t> generate_kmers(size_t num) {
 
 TEST(Annotate, RandomTestNoFalseNegative) {
     //create annotation
-    hash_annotate::BloomHashAnnotation bloom_anno;
+    hash_annotate::BloomHashAnnotation bloom_anno(7);
     hash_annotate::ExactHashAnnotation exact_anno;
     hash_annotate::BloomFilter bloom(num_random_kmers);
     hash_annotate::ExactFilter exact;
@@ -56,8 +56,47 @@ TEST(Annotate, RandomTestNoFalseNegative) {
     EXPECT_TRUE(total >= fp) << "Total: " << total << " FP: " << fp << std::endl;
 }
 
-TEST(Annotate, BloomSerialize) {
+TEST(Annotate, BloomFilterEmpty) {
+    hash_annotate::BloomHashAnnotation bloom_anno(7);
+    hash_annotate::BloomFilter empty(num_random_kmers);
+
+    EXPECT_EQ(0, empty.occupancy());
+    //generate a bunch of kmers
+    auto kmers = generate_kmers(num_random_kmers);
+    for (size_t i = 0; i < kmers.size(); ++i) {
+        ASSERT_FALSE(empty.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+    }
+}
+
+TEST(Annotate, BloomFilterEmptyHash) {
     hash_annotate::BloomHashAnnotation bloom_anno;
+    hash_annotate::BloomFilter bloom(num_random_kmers);
+    auto kmers = generate_kmers(num_random_kmers);
+    for (size_t i = 0; i < kmers.size(); ++i) {
+        bloom.insert(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1));
+        ASSERT_FALSE(bloom.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+    }
+}
+
+TEST(Annotate, BloomEquality) {
+    hash_annotate::BloomHashAnnotation bloom_anno(7);
+    hash_annotate::BloomFilter bloom(num_random_kmers);
+    hash_annotate::BloomFilter empty1(1), empty2(num_random_kmers);
+    //generate a bunch of kmers
+    auto kmers = generate_kmers(num_random_kmers);
+    for (size_t i = 0; i < kmers.size(); ++i) {
+        bloom.insert(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1));
+        ASSERT_TRUE(bloom.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+        ASSERT_FALSE(empty1.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+        ASSERT_FALSE(empty2.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+    }
+    EXPECT_EQ(bloom, bloom);
+    EXPECT_NE(empty1, bloom);
+    EXPECT_NE(empty2, bloom);
+}
+
+TEST(Annotate, BloomSerialize) {
+    hash_annotate::BloomHashAnnotation bloom_anno(7);
     hash_annotate::BloomFilter bloom(num_random_kmers);
     //generate a bunch of kmers
     auto kmers = generate_kmers(num_random_kmers);
@@ -76,7 +115,7 @@ TEST(Annotate, BloomSerialize) {
 }
 
 TEST(Annotate, BloomHashSerialize) {
-    hash_annotate::BloomHashAnnotation bloom_anno;
+    hash_annotate::BloomHashAnnotation bloom_anno(7);
     bloom_anno.append_bit(num_random_kmers);
     //generate a bunch of kmers
     auto kmers = generate_kmers(num_random_kmers);
