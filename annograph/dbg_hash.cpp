@@ -1,33 +1,23 @@
 #include "dbg_hash.hpp"
-
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/set.hpp>
-#include <boost/serialization/unordered_map.hpp>
-#include <boost/archive/impl/basic_binary_oprimitive.ipp>
-#include <boost/archive/impl/basic_binary_iprimitive.ipp>
+#include "bloom_annotator/serialization.hpp"
 
 const std::string kAlphabet = "ACGTN$";
 
 
 void DBGHash::serialize(const std::string &filename) const {
     std::ofstream out(filename);
-    boost::archive::binary_oarchive oarch(out);
-    oarch & kmers_.size();
-    oarch & k_;
-    oarch & indices_;
+    serialization::serializeNumber(out, kmers_.size());
+    serialization::serializeNumber(out, k_);
+    serialization::serializeStringMap(out, indices_);
     out.close();
 }
 
 void DBGHash::load(const std::string &filename) {
     std::ifstream in(filename);
-    boost::archive::binary_iarchive iarch(in);
-    size_t size;
-    iarch & size;
-    iarch & k_;
+    size_t size = serialization::loadNumber(in);
+    k_ = serialization::loadNumber(in);
     kmers_.resize(size);
-    iarch & indices_;
+    indices_ = std::move(serialization::loadStringMap(in));
     //kmers_.resize(indices_.size());
     for (auto &kmer : indices_)
         kmers_[kmer.second] = &kmer.first;

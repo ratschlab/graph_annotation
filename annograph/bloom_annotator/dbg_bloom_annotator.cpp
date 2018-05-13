@@ -1,37 +1,11 @@
 #include "dbg_bloom_annotator.hpp"
+#include "serialization.hpp"
 
 #include <fstream>
 #include <cmath>
 
 
 namespace hash_annotate {
-
-uint64_t serializeNumber(std::ostream &out, uint64_t const n) {
-    out.put(static_cast<char>((n >> (7 * 8)) & 0xFF));
-    out.put(static_cast<char>((n >> (6 * 8)) & 0xFF));
-    out.put(static_cast<char>((n >> (5 * 8)) & 0xFF));
-    out.put(static_cast<char>((n >> (4 * 8)) & 0xFF));
-    out.put(static_cast<char>((n >> (3 * 8)) & 0xFF));
-    out.put(static_cast<char>((n >> (2 * 8)) & 0xFF));
-    out.put(static_cast<char>((n >> (1 * 8)) & 0xFF));
-    out.put(static_cast<char>((n >> (0 * 8)) & 0xFF));
-
-    if (!out) {
-        std::cerr << "Serialization failure" << std::endl;
-        exit(1);
-    }
-
-    return 8;
-}
-
-uint64_t serializeNumberVector(std::ostream &out, std::vector<uint64_t> const &v) {
-    uint64_t  s = 0;
-    s += serializeNumber(out, v.size());
-    for (auto &n : v) {
-        s += serializeNumber(out, n);
-    }
-    return s;
-}
 
 void PreciseHashAnnotator::serialize(std::ostream &out) const {
     annotation_exact.serialize(out);
@@ -54,10 +28,10 @@ void PreciseHashAnnotator::load(const std::string &filename) {
 }
 
 void PreciseHashAnnotator::export_rows(std::ostream &out) const {
-    serializeNumber(out, annotation_exact.kmer_map_.size());
+    serialization::serializeNumber(out, annotation_exact.kmer_map_.size());
     for (auto &kmer : annotation_exact.kmer_map_) {
         auto annot = annotation_from_kmer(kmer.first);
-        serializeNumberVector(out, annot);
+        serialization::serializeNumberVector(out, annot);
     }
 }
 

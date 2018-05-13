@@ -44,7 +44,7 @@ add_executable(annograph "annotation_main.cpp")
 
 set(METALIBS
   -lhts -lz -lbz2
-  -lssl -lcrypto -llzma -lboost_serialization
+  -lssl -lcrypto -llzma
 )
 
 if(BUILD_STATIC)

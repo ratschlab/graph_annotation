@@ -1,5 +1,6 @@
 #include <random>
 #include <fstream>
+#include <string>
 
 #include "gtest/gtest.h"
 #include "dbg_bloom_annotator.hpp"
@@ -15,13 +16,12 @@ struct uint256_t {
     __uint128_t m_high;
 };
 
-std::vector<uint256_t> generate_kmers(size_t num) {
-    std::vector<uint256_t> kmers(num);
-    for (size_t i = 0; i < kmers.size(); ++i) {
-        *(reinterpret_cast<uint64_t*>(&kmers[i]))     = rand();
-        *(reinterpret_cast<uint64_t*>(&kmers[i]) + 1) = rand();
-        *(reinterpret_cast<uint64_t*>(&kmers[i]) + 2) = rand();
-        *(reinterpret_cast<uint64_t*>(&kmers[i]) + 3) = rand();
+std::vector<std::string> generate_kmers(size_t num) {
+    std::vector<std::string> kmers(num);
+    for (auto &kmer : kmers) {
+        for (size_t j = 0; j < 82; ++j) {
+            kmer.push_back((rand() % 26) + 65);
+        }
     }
     return kmers;
 }
@@ -29,25 +29,25 @@ std::vector<uint256_t> generate_kmers(size_t num) {
 TEST(Annotate, RandomTestNoFalseNegative) {
     //create annotation
     hash_annotate::BloomHashAnnotation bloom_anno(7);
-    hash_annotate::ExactHashAnnotation exact_anno;
     hash_annotate::BloomFilter bloom(num_random_kmers);
+    hash_annotate::ExactHashAnnotation exact_anno;
     hash_annotate::ExactFilter exact;
     //generate a bunch of kmers
     auto kmers = generate_kmers(num_random_kmers);
     size_t total = 0, fp = 0;
     for (size_t i = 0; i < kmers.size(); ++i) {
         if (i < kmers.size() / 2) {
-            bloom.insert(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1));
-            exact.insert(exact_anno.compute_hash(&kmers[i], &kmers[i] + 1));
-            ASSERT_TRUE(bloom.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
-            ASSERT_TRUE(exact.find(exact_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+            bloom.insert(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length()));
+            exact.insert(exact_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length()));
+            ASSERT_TRUE(bloom.find(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length())));
+            ASSERT_TRUE(exact.find(exact_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length())));
         } else {
-            if (exact.find(exact_anno.compute_hash(&kmers[i], &kmers[i] + 1))) {
-                ASSERT_TRUE(bloom.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+            if (exact.find(exact_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length()))) {
+                ASSERT_TRUE(bloom.find(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length())));
             }
-            if (!exact.find(exact_anno.compute_hash(&kmers[i], &kmers[i] + 1))) {
+            if (!exact.find(exact_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length()))) {
                 total++;
-                if (bloom.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1))) {
+                if (bloom.find(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length()))) {
                     fp++;
                 }
             }
@@ -64,7 +64,7 @@ TEST(Annotate, BloomFilterEmpty) {
     //generate a bunch of kmers
     auto kmers = generate_kmers(num_random_kmers);
     for (size_t i = 0; i < kmers.size(); ++i) {
-        ASSERT_FALSE(empty.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+        ASSERT_FALSE(empty.find(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length())));
     }
 }
 
@@ -73,8 +73,8 @@ TEST(Annotate, BloomFilterEmptyHash) {
     hash_annotate::BloomFilter bloom(num_random_kmers);
     auto kmers = generate_kmers(num_random_kmers);
     for (size_t i = 0; i < kmers.size(); ++i) {
-        bloom.insert(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1));
-        ASSERT_FALSE(bloom.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+        bloom.insert(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length()));
+        ASSERT_FALSE(bloom.find(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length())));
     }
 }
 
@@ -85,33 +85,46 @@ TEST(Annotate, BloomEquality) {
     //generate a bunch of kmers
     auto kmers = generate_kmers(num_random_kmers);
     for (size_t i = 0; i < kmers.size(); ++i) {
-        bloom.insert(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1));
-        ASSERT_TRUE(bloom.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
-        ASSERT_FALSE(empty1.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
-        ASSERT_FALSE(empty2.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+        bloom.insert(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length()));
+        ASSERT_TRUE(bloom.find(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length())));
+        ASSERT_FALSE(empty1.find(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length())));
+        ASSERT_FALSE(empty2.find(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length())));
     }
     EXPECT_EQ(bloom, bloom);
     EXPECT_NE(empty1, bloom);
     EXPECT_NE(empty2, bloom);
 }
 
-TEST(Annotate, BloomSerialize) {
+TEST(Annotate, Serialize) {
     hash_annotate::BloomHashAnnotation bloom_anno(7);
     hash_annotate::BloomFilter bloom(num_random_kmers);
+    hash_annotate::ExactHashAnnotation exact_anno;
     //generate a bunch of kmers
     auto kmers = generate_kmers(num_random_kmers);
     for (size_t i = 0; i < kmers.size(); ++i) {
-        bloom.insert(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1));
-        ASSERT_TRUE(bloom.find(bloom_anno.compute_hash(&kmers[i], &kmers[i] + 1)));
+        bloom.insert(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length()));
+        ASSERT_TRUE(bloom.find(bloom_anno.compute_hash(kmers[i].data(), kmers[i].data() + kmers[i].length())));
+        exact_anno.insert(kmers[i].data(), kmers[i].data() + kmers[i].length(), 0);
     }
+
     std::ofstream outstream(test_dump_basename + "_bloomser");
     bloom.serialize(outstream);
+    outstream.close();
+
+    outstream.open(test_dump_basename + "_exactser");
+    exact_anno.serialize(outstream);
     outstream.close();
 
     std::ifstream instream(test_dump_basename + "_bloomser");
     hash_annotate::BloomFilter bloom_alt(1);
     bloom_alt.load(instream);
     EXPECT_EQ(bloom, bloom_alt);
+    instream.close();
+
+    instream.open(test_dump_basename + "_exactser");
+    hash_annotate::ExactHashAnnotation exact_alt;
+    exact_alt.load(instream);
+    EXPECT_EQ(exact_anno, exact_alt);
 }
 
 TEST(Annotate, BloomHashSerialize) {
@@ -120,8 +133,8 @@ TEST(Annotate, BloomHashSerialize) {
     //generate a bunch of kmers
     auto kmers = generate_kmers(num_random_kmers);
     for (size_t i = 0; i < kmers.size(); ++i) {
-        bloom_anno.insert(&kmers[i], &kmers[i] + 1, 0);
-        ASSERT_EQ(1, bloom_anno.find(&kmers[i], &kmers[i] + 1, 0)[0]);
+        bloom_anno.insert(kmers[i].data(), kmers[i].data() + kmers[i].length(), 0);
+        ASSERT_EQ(1, bloom_anno.find(kmers[i].data(), kmers[i].data() + kmers[i].length(), 0)[0]);
     }
     std::ofstream outstream(test_dump_basename + "_bloomser");
     bloom_anno.serialize(outstream);
@@ -158,11 +171,11 @@ TEST(Annotate, RandomHashAnnotator) {
                     continue;
 
                 //insert
-                auto testbloom = bloomhash.insert(&kmers[i], &kmers[i] + 1, j);
-                auto testexact = exacthash.insert(&kmers[i], &kmers[i] + 1, j);
+                auto testbloom = bloomhash.insert(kmers[i].data(), kmers[i].data() + kmers[i].length(), j);
+                auto testexact = exacthash.insert(kmers[i].data(), kmers[i].data() + kmers[i].length(), j);
                 //check if it's there
-                testbloom = bloomhash.find(&kmers[i], &kmers[i] + 1, j);
-                testexact = exacthash.find(&kmers[i], &kmers[i] + 1, j);
+                testbloom = bloomhash.find(kmers[i].data(), kmers[i].data() + kmers[i].length(), j);
+                testexact = exacthash.find(kmers[i].data(), kmers[i].data() + kmers[i].length(), j);
 
                 //test OR
                 auto testbloom_merged = testbloom;
@@ -179,8 +192,8 @@ TEST(Annotate, RandomHashAnnotator) {
                 ASSERT_TRUE(hash_annotate::equal(testexact, testbloom_and));
             }
         }
-        auto testbloom = bloomhash.find(&kmers[i], &kmers[i] + 1);
-        auto testexact = exacthash.find(&kmers[i], &kmers[i] + 1);
+        auto testbloom = bloomhash.find(kmers[i].data(), kmers[i].data() + kmers[i].length());
+        auto testexact = exacthash.find(kmers[i].data(), kmers[i].data() + kmers[i].length());
         ASSERT_TRUE(hash_annotate::equal(testbloom, hash_annotate::merge_or(testbloom, testexact)));
     }
 }

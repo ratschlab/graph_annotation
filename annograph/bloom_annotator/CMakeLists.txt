@@ -1,6 +1,7 @@
 add_library(bloom_annotator STATIC
   dbg_bloom_annotator.cpp
   hashers.cpp
+  serialization.cpp
 )
 
 include_directories(
@@ -12,5 +13,5 @@ target_include_directories(bloom_annotator PUBLIC
 )
 
 target_link_libraries(
-  bloom_annotator -lboost_serialization
+  bloom_annotator
 )

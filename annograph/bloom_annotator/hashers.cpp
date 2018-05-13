@@ -1,13 +1,7 @@
 #include "hashers.hpp"
+#include "serialization.hpp"
 
 #include <fstream>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/set.hpp>
-#include <boost/serialization/unordered_map.hpp>
-#include <boost/archive/impl/basic_binary_oprimitive.ipp>
-#include <boost/archive/impl/basic_binary_iprimitive.ipp>
 
 #include "cyclichash.h"
 
@@ -196,15 +190,19 @@ bool BloomFilter::insert(const MultiHash &multihash) {
 }
 
 void BloomFilter::serialize(std::ostream &out) const {
-    boost::archive::binary_oarchive oar(out);
-    oar & n_bits_;
-    oar & bits;
+    serialization::serializeNumber(out, n_bits_);
+    serialization::serializeNumber(out, bits.size());
+    for (auto &limb : bits) {
+        serialization::serializeNumber(out, limb);
+    }
 }
 
 void BloomFilter::load(std::istream &in) {
-    boost::archive::binary_iarchive iar(in);
-    iar & n_bits_;
-    iar & bits;
+    n_bits_ = serialization::loadNumber(in);
+    bits.resize(serialization::loadNumber(in));
+    for (auto &limb : bits) {
+        limb = serialization::loadNumber(in);
+    }
 }
 
 bool BloomFilter::operator==(const BloomFilter &a) const {
@@ -237,10 +235,37 @@ double BloomFilter::occupancy() const {
     return static_cast<double>(count) / static_cast<double>(bits.size() * 64);
 }
 
+bool ExactHashAnnotation::operator==(const ExactHashAnnotation &that) const {
+    if (kmer_map_.size() != that.kmer_map_.size())
+        return false;
+    if (num_columns_ != that.num_columns_)
+        return false;
+    for (auto &it : kmer_map_) {
+        auto find_it = that.kmer_map_.find(it.first);
+        if (find_it == that.kmer_map_.end())
+            return false;
+        if (!std::equal(find_it->second.begin(), find_it->second.end(),
+                        it.second.begin(), it.second.end())) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ExactHashAnnotation::operator!=(const ExactHashAnnotation &that) const {
+    return !(*this == that);
+}
+
 void ExactHashAnnotation::serialize(std::ostream &out) const {
-    boost::archive::binary_oarchive oarch(out);
-    oarch & kmer_map_;
-    oarch & num_columns_;
+    serialization::serializeNumber(out, kmer_map_.size());
+    for (auto &it : kmer_map_) {
+        serialization::serializeNumber(out, it.second.size());
+        for (auto &i : it.second) {
+            serialization::serializeNumber(out, i);
+        }
+        serialization::serializeString(out, it.first);
+    }
+    serialization::serializeNumber(out, num_columns_);
 }
 
 void ExactHashAnnotation::serialize(const std::string &filename) const {
@@ -250,9 +275,17 @@ void ExactHashAnnotation::serialize(const std::string &filename) const {
 }
 
 void ExactHashAnnotation::load(std::istream &in) {
-    boost::archive::binary_iarchive iarch(in);
-    iarch & kmer_map_;
-    iarch & num_columns_;
+    kmer_map_.clear();
+    size_t kmer_map_size = serialization::loadNumber(in);
+    while (kmer_map_size--) {
+        std::set<size_t> nums;
+        size_t num_size = serialization::loadNumber(in);
+        while (num_size--) {
+            nums.insert(serialization::loadNumber(in));
+        }
+        kmer_map_[serialization::loadString(in)] = nums;
+    }
+    num_columns_ = serialization::loadNumber(in);
 }
 
 void ExactHashAnnotation::load(const std::string &filename) {

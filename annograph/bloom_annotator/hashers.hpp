@@ -442,6 +442,9 @@ class ExactHashAnnotation {
     void load(std::istream &in);
     void load(const std::string &filename);
 
+    bool operator==(const ExactHashAnnotation &that) const;
+    bool operator!=(const ExactHashAnnotation &that) const;
+
     friend class PreciseHashAnnotator;
 
   private:
