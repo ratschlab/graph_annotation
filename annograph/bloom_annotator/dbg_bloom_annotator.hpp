@@ -72,6 +72,10 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     void export_rows(std::ostream &out) const;
     void export_rows(const std::string &filename) const;
 
+    size_t num_columns() const { return annotation_exact.size(); }
+
+    size_t size() const { return annotation_exact.get_num_edges(); }
+
   private:
     ExactHashAnnotation annotation_exact;
     const DeBruijnGraphWrapper &graph_;
@@ -101,6 +105,8 @@ class BloomAnnotator {
                                                    bool check_both_directions = false,
                                                    size_t path_cutoff = 50) const;
 
+    std::vector<uint64_t> annotation_from_kmer(const std::string &kmer) const;
+
     void test_fp_all(const PreciseAnnotator &annotation_exact,
                      size_t num = 0,
                      bool check_both_directions = false) const;
@@ -124,8 +130,6 @@ class BloomAnnotator {
     size_t get_size(size_t i) const;
 
   private:
-    std::vector<uint64_t> annotation_from_kmer(const std::string &kmer) const;
-
     std::string kmer_from_index(DeBruijnGraphWrapper::edge_index index) const;
 
     std::vector<uint64_t> test_fp(DeBruijnGraphWrapper::edge_index i,

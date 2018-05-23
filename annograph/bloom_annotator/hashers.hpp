@@ -31,6 +31,7 @@ void set_bit(std::vector<uint64_t> &a, size_t i);
 
 bool equal(const std::vector<uint64_t> &a, const std::vector<uint64_t> &b);
 
+void print(const std::vector<uint64_t> &a);
 
 class HashIterator {
   public:
@@ -423,6 +424,10 @@ class ExactHashAnnotation {
         return num_columns_;
     }
 
+    size_t get_num_edges() const {
+        return kmer_map_.size();
+    }
+
     void resize(size_t size) {
         num_columns_ = size;
     }
@@ -448,7 +453,8 @@ class ExactHashAnnotation {
     friend class PreciseHashAnnotator;
 
   private:
-    std::unordered_map<std::string, std::set<size_t>> kmer_map_;
+    typedef std::unordered_map<std::string, std::set<size_t>> kmer_storage_t;
+    kmer_storage_t kmer_map_;
     size_t num_columns_;
 };
 

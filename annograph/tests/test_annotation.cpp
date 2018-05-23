@@ -4,7 +4,9 @@
 
 #include "gtest/gtest.h"
 #include "dbg_bloom_annotator.hpp"
+#include "serialization.hpp"
 #include "hashers.hpp"
+#include "dbg_hash.hpp"
 
 const std::string test_data_dir = "../tests/data";
 const std::string test_dump_basename = test_data_dir + "/dump_test";
@@ -16,10 +18,10 @@ struct uint256_t {
     __uint128_t m_high;
 };
 
-std::vector<std::string> generate_kmers(size_t num) {
+std::vector<std::string> generate_kmers(size_t num, size_t k = 82) {
     std::vector<std::string> kmers(num);
     for (auto &kmer : kmers) {
-        for (size_t j = 0; j < 82; ++j) {
+        for (size_t j = 0; j < k; ++j) {
             kmer.push_back((rand() % 26) + 65);
         }
     }
@@ -232,6 +234,42 @@ TEST(Annotate, HashIteratorEmpty) {
 
     hash_annotate::CyclicHashIterator hash_it2("1", 5, num_hash_functions);
     ASSERT_TRUE(hash_it.is_end());
+}
+
+TEST(Annotate, Annotators) {
+    for (size_t k = 10; k < 90; k += 10) {
+        auto kmers = generate_kmers(num_random_kmers, k + 1);
+        size_t num_seqs = 10;
+        size_t size_chunk = kmers.size() / num_seqs;
+        std::vector<std::string> sequences(num_seqs);
+        for (size_t i = 0; i < num_seqs; ++i) {
+            sequences[i] = std::accumulate(
+                    kmers.begin() + i * size_chunk,
+                    kmers.begin() + (i + 1) * size_chunk,
+                    std::string(""));
+        }
+
+        DBGHash graph(k);
+        hash_annotate::PreciseHashAnnotator precise(graph);
+        for (size_t i = 0; i < num_seqs; ++i) {
+            graph.add_sequence(sequences[i]);
+            precise.add_sequence(sequences[i], i);
+        }
+        EXPECT_EQ(graph.get_num_edges(), precise.size());
+        for (double bloom_fpp = 0.05; bloom_fpp < 1.0; bloom_fpp *= 3) {
+            hash_annotate::BloomAnnotator bloom(graph, bloom_fpp);
+            for (size_t i = 0; i < num_seqs; ++i) {
+                bloom.add_sequence(sequences[i], i);
+            }
+            for (auto &kmer : kmers) {
+                auto bloom_annot = bloom.annotation_from_kmer(kmer);
+                auto precise_annot = precise.annotation_from_kmer(kmer);
+                EXPECT_TRUE(hash_annotate::equal(
+                            hash_annotate::merge_or(bloom_annot, precise_annot),
+                            bloom_annot));
+            }
+        }
+    }
 }
 
 //TODO: WRITE A UNIT TEST TO MAKE SURE BLOOM FILTERS ARE SUPERSET OF EXACT FILTER
