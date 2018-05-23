@@ -191,18 +191,12 @@ bool BloomFilter::insert(const MultiHash &multihash) {
 
 void BloomFilter::serialize(std::ostream &out) const {
     serialization::serializeNumber(out, n_bits_);
-    serialization::serializeNumber(out, bits.size());
-    for (auto &limb : bits) {
-        serialization::serializeNumber(out, limb);
-    }
+    serialization::serializeNumberVector(out, bits);
 }
 
 void BloomFilter::load(std::istream &in) {
     n_bits_ = serialization::loadNumber(in);
-    bits.resize(serialization::loadNumber(in));
-    for (auto &limb : bits) {
-        limb = serialization::loadNumber(in);
-    }
+    bits = serialization::loadNumberVector(in);
 }
 
 bool BloomFilter::operator==(const BloomFilter &a) const {
