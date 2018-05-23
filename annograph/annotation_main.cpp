@@ -101,6 +101,7 @@ int main(int argc, const char *argv[]) {
     double file_read_time = 0;
     double bloom_const_time = 0;
     std::cout << "Start reading data and extracting k-mers..." << std::endl;
+    std::set<size_t> prefix_cols;
 
     // iterate over input files
     for (unsigned int f = 0; f < files.size(); ++f) {
@@ -216,9 +217,14 @@ int main(int argc, const char *argv[]) {
                         precise_const_time += result_timer.elapsed();
                     }
 
-                    for (auto &annot : annotation) {
+                    assert(annotation.size() <= 2);
+                    for (size_t _i = 0; _i < annotation.size(); ++_i) {
+                    //for (auto &annot : annotation) {
                         if (!fastq) {
-                            map_ins = annot_map.insert(std::make_pair(annot, annot_map.size()));
+                            map_ins = annot_map.insert(std::make_pair(annotation[_i], annot_map.size()));
+                        }
+                        if (annotation.size() > 1 && !_i) {
+                            prefix_cols.insert(map_ins.first->second);
                         }
                         if (annotator) {
                             result_timer.reset();
@@ -286,7 +292,7 @@ int main(int argc, const char *argv[]) {
         std::cout << "Serializing precise annotation...\t" << std::flush;
         timer.reset();
         precise_annotator->serialize(config->outfbase + ".precise.dbg");
-        precise_annotator->export_rows(config->outfbase + ".anno.rawrows.dbg");
+        precise_annotator->export_rows(config->outfbase + ".anno.rawrows.dbg", prefix_cols);
         std::cout << timer.elapsed() << std::endl;
     }
 

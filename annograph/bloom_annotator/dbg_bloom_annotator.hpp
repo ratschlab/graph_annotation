@@ -3,6 +3,8 @@
 
 #include "hashers.hpp"
 
+#include <map>
+
 
 namespace hash_annotate {
 
@@ -60,7 +62,7 @@ class PreciseHashAnnotator : public PreciseAnnotator {
 
     void add_column(const std::string &sequence, bool rooted = false);
 
-    std::vector<uint64_t> annotation_from_kmer(const std::string &kmer) const;
+    std::vector<uint64_t> annotation_from_kmer(const std::string &kmer, const std::set<size_t> &prefix_indices = {}) const;
     std::vector<uint64_t> annotate_edge(DeBruijnGraphWrapper::edge_index i) const;
 
     void serialize(std::ostream &out) const;
@@ -69,12 +71,20 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     void load(std::istream &in);
     void load(const std::string &filename);
 
-    void export_rows(std::ostream &out) const;
-    void export_rows(const std::string &filename) const;
+    void export_rows(std::ostream &out, const std::set<size_t> &prefix_indices = {}) const;
+
+    void export_rows(const std::string &filename, const std::set<size_t> &prefix_indices = {}) const;
+
+    ExactHashAnnotation::kmer_storage_t::const_iterator begin() const { return annotation_exact.kmer_map_.begin(); }
+    ExactHashAnnotation::kmer_storage_t::const_iterator end() const { return annotation_exact.kmer_map_.end(); }
 
     size_t num_columns() const { return annotation_exact.size(); }
 
     size_t size() const { return annotation_exact.get_num_edges(); }
+
+    std::map<size_t, size_t> compute_permutation_map(const std::set<size_t> &prefix_indices) const;
+
+    std::vector<size_t> permute_indices(const std::vector<size_t> &a, const std::map<size_t, size_t> &index_map) const;
 
   private:
     ExactHashAnnotation annotation_exact;

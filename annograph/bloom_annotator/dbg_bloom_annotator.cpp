@@ -3,9 +3,33 @@
 
 #include <fstream>
 #include <cmath>
+#include <map>
 
 
 namespace hash_annotate {
+
+std::map<size_t, size_t> PreciseHashAnnotator::compute_permutation_map(const std::set<size_t> &prefix_indices) const {
+    std::map<size_t, size_t> index_map;
+    size_t index_size = 0;
+    for (auto i : prefix_indices) {
+        // indices are wrong when setting index_map[i] = index_map.size() instead
+        index_map[i] = index_size++;
+    }
+    for (size_t i = 0; i < annotation_exact.size(); ++i) {
+        index_size += index_map.insert(std::make_pair(i, index_size)).second;
+    }
+    assert(index_size == num_columns());
+    return index_map;
+}
+
+std::vector<size_t> PreciseHashAnnotator::permute_indices(const std::vector<size_t> &a, const std::map<size_t, size_t> &index_map) const {
+    std::vector<size_t> b(a.size());
+    for (size_t i = 0; i < annotation_exact.size(); ++i) {
+        if (test_bit(a, i))
+            set_bit(b, index_map.find(i)->second);
+    }
+    return b;
+}
 
 void PreciseHashAnnotator::serialize(std::ostream &out) const {
     annotation_exact.serialize(out);
@@ -27,17 +51,25 @@ void PreciseHashAnnotator::load(const std::string &filename) {
     fin.close();
 }
 
-void PreciseHashAnnotator::export_rows(std::ostream &out) const {
+void PreciseHashAnnotator::export_rows(std::ostream &out, const std::set<size_t> &prefix_indices) const {
     serialization::serializeNumber(out, annotation_exact.kmer_map_.size());
+    std::map<size_t, size_t> index_map;
+    if (prefix_indices.size()) {
+        index_map = compute_permutation_map(prefix_indices);
+    }
     for (auto &kmer : annotation_exact.kmer_map_) {
         auto annot = annotation_from_kmer(kmer.first);
-        serialization::serializeNumberVector(out, annot);
+        if (prefix_indices.empty()) {
+            serialization::serializeNumberVector(out, annot);
+        } else {
+            serialization::serializeNumberVector(out, permute_indices(annot, index_map));
+        }
     }
 }
 
-void PreciseHashAnnotator::export_rows(const std::string &filename) const {
+void PreciseHashAnnotator::export_rows(const std::string &filename, const std::set<size_t> &prefix_indices) const {
     std::ofstream fout(filename);
-    export_rows(fout);
+    export_rows(fout, prefix_indices);
     fout.close();
 }
 
@@ -66,9 +98,14 @@ void PreciseHashAnnotator::add_column(const std::string &sequence, bool rooted) 
 }
 
 std::vector<uint64_t>
-PreciseHashAnnotator::annotation_from_kmer(const std::string &kmer) const {
+PreciseHashAnnotator::annotation_from_kmer(const std::string &kmer, const std::set<size_t> &prefix_indices) const {
     assert(kmer.length() == graph_.get_k() + 1);
-    return annotation_exact.find(kmer.data(), kmer.data() + kmer.size());
+    auto annot = annotation_exact.find(kmer.data(), kmer.data() + kmer.size());
+    if (prefix_indices.empty())
+        return annot;
+
+    auto index_map = compute_permutation_map(prefix_indices);
+    return permute_indices(annot, index_map);
 }
 
 size_t compute_optimal_num_hashes(double bloom_fpp, double bloom_size_factor = -1) {
