@@ -16,7 +16,7 @@ std::map<size_t, size_t> PreciseHashAnnotator::compute_permutation_map(const std
         index_map[i] = index_size++;
     }
     for (size_t i = 0; i < annotation_exact.size(); ++i) {
-        index_size += index_map.insert(std::make_pair(i, index_size)).second;
+        index_size += index_map.emplace(i, index_size).second;
     }
     assert(index_size == num_columns());
     return index_map;

@@ -127,10 +127,16 @@ int main(int argc, const char *argv[]) {
             for (size_t i = 1; vcf.get_seq(annots, &sequence, annotation); ++i) {
                 //doesn't cover the no annot case
                 size_t cursize = annot_map.size();
-                for (auto &annot : annotation) {
-                    auto insert_annot_map = annot_map.emplace(annot, cursize);
-                    if (insert_annot_map.second)
+                for (size_t _i = 0; _i < annotation.size(); ++_i) {
+                //for (auto &annot : annotation) {
+                    auto insert_annot_map = annot_map.emplace(annotation[_i], cursize);
+                    if (insert_annot_map.second) {
                         cursize++;
+                    }
+                    if (!_i) {
+                        // assume first annotation is the reference
+                        prefix_cols.insert(insert_annot_map.first->second);
+                    }
                     auto insert_annot = variants.emplace(insert_annot_map.first->second, sequence);
                     if (!insert_annot.second) {
                         insert_annot.first->second += std::string("$") + sequence;
