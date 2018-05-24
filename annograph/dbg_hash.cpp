@@ -132,7 +132,7 @@ void DBGHash::add_sequence(const std::string &sequence, bool rooted) {
             kmers_.push_back(kmer);
         }
         */
-        auto index_insert = indices_.insert(std::make_pair(kmer, kmers_.size()));
+        auto index_insert = indices_.emplace(kmer, kmers_.size());
         if (index_insert.second) {
             kmers_.push_back(&(index_insert.first->first));
         }

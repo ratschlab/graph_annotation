@@ -126,9 +126,10 @@ int main(int argc, const char *argv[]) {
             data_reading_timer.reset();
             for (size_t i = 1; vcf.get_seq(annots, &sequence, annotation); ++i) {
                 //doesn't cover the no annot case
+                size_t cursize = annot_map.size();
                 for (auto &annot : annotation) {
-                    auto insert_annot_map = annot_map.insert(std::make_pair(annot, annot_map.size()));
-                    auto insert_annot = variants.insert(std::make_pair(insert_annot_map.first->second, sequence));
+                    auto insert_annot_map = annot_map.emplace(annot, cursize++);
+                    auto insert_annot = variants.emplace(insert_annot_map.first->second, sequence);
                     if (!insert_annot.second) {
                         insert_annot.first->second += std::string("$") + sequence;
                     }
@@ -184,14 +185,14 @@ int main(int argc, const char *argv[]) {
             std::vector<std::string> annotation;
             if (fastq) {
                 //TODO annotations for reference genome
-                map_ins = annot_map.insert(std::make_pair(files[f], annot_map.size()));
+                size_t cursize = annot_map.size();
+                map_ins = annot_map.emplace(files[f], cursize);
                 annotation.push_back(files[f]);
             }
 
             while (kseq_read(read_stream) >= 0) {
                 file_read_time += result_timer.elapsed();
                 if (!fastq) {
-                    //TODO: better way to handle backbone bits
                     annotation.clear();
                     char *sep = NULL;
                     if (!config->fasta_header_delimiter.empty())
@@ -221,7 +222,8 @@ int main(int argc, const char *argv[]) {
                     for (size_t _i = 0; _i < annotation.size(); ++_i) {
                     //for (auto &annot : annotation) {
                         if (!fastq) {
-                            map_ins = annot_map.insert(std::make_pair(annotation[_i], annot_map.size()));
+                            size_t cursize = annot_map.size();
+                            map_ins = annot_map.emplace(annotation[_i], cursize);
                         }
                         if (annotation.size() > 1 && !_i) {
                             prefix_cols.insert(map_ins.first->second);
