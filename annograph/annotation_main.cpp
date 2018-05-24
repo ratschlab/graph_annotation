@@ -128,7 +128,9 @@ int main(int argc, const char *argv[]) {
                 //doesn't cover the no annot case
                 size_t cursize = annot_map.size();
                 for (auto &annot : annotation) {
-                    auto insert_annot_map = annot_map.emplace(annot, cursize++);
+                    auto insert_annot_map = annot_map.emplace(annot, cursize);
+                    if (insert_annot_map.second)
+                        cursize++;
                     auto insert_annot = variants.emplace(insert_annot_map.first->second, sequence);
                     if (!insert_annot.second) {
                         insert_annot.first->second += std::string("$") + sequence;
