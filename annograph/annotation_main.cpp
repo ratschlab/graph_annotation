@@ -101,7 +101,6 @@ int main(int argc, const char *argv[]) {
     double file_read_time = 0;
     double bloom_const_time = 0;
     std::cout << "Start reading data and extracting k-mers..." << std::endl;
-    std::set<size_t> prefix_cols;
 
     // iterate over input files
     for (unsigned int f = 0; f < files.size(); ++f) {
@@ -133,9 +132,9 @@ int main(int argc, const char *argv[]) {
                     if (insert_annot_map.second) {
                         cursize++;
                     }
-                    if (!_i) {
+                    if (!_i && precise_annotator && config->infbase.empty()) {
                         // assume first annotation is the reference
-                        prefix_cols.insert(insert_annot_map.first->second);
+                        precise_annotator->make_column_prefix(insert_annot_map.first->second);
                     }
                     auto insert_annot = variants.emplace(insert_annot_map.first->second, sequence);
                     if (!insert_annot.second) {
@@ -233,9 +232,6 @@ int main(int argc, const char *argv[]) {
                             size_t cursize = annot_map.size();
                             map_ins = annot_map.emplace(annotation[_i], cursize);
                         }
-                        if (annotation.size() > 1 && !_i) {
-                            prefix_cols.insert(map_ins.first->second);
-                        }
                         if (annotator) {
                             result_timer.reset();
                             annotator->add_sequence(read_stream->seq.s, map_ins.first->second,
@@ -245,6 +241,8 @@ int main(int argc, const char *argv[]) {
                         }
                         if (precise_annotator && config->infbase.empty()) {
                             result_timer.reset();
+                            if (!_i && annotation.size() > 1)
+                                precise_annotator->make_column_prefix(map_ins.first->second);
                             precise_annotator->add_sequence(read_stream->seq.s, map_ins.first->second);
                             precise_const_time += result_timer.elapsed();
                         }
@@ -302,7 +300,7 @@ int main(int argc, const char *argv[]) {
         std::cout << "Serializing precise annotation...\t" << std::flush;
         timer.reset();
         precise_annotator->serialize(config->outfbase + ".precise.dbg");
-        precise_annotator->export_rows(config->outfbase + ".anno.rawrows.dbg", prefix_cols);
+        precise_annotator->export_rows(config->outfbase + ".anno.rawrows.dbg");
         std::cout << timer.elapsed() << std::endl;
     }
 

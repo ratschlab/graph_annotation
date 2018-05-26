@@ -62,7 +62,7 @@ class PreciseHashAnnotator : public PreciseAnnotator {
 
     void add_column(const std::string &sequence, bool rooted = false);
 
-    std::vector<uint64_t> annotation_from_kmer(const std::string &kmer, const std::set<size_t> &prefix_indices = {}) const;
+    std::vector<uint64_t> annotation_from_kmer(const std::string &kmer, bool permute = false) const;
     std::vector<uint64_t> annotate_edge(DeBruijnGraphWrapper::edge_index i) const;
 
     void serialize(std::ostream &out) const;
@@ -71,24 +71,32 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     void load(std::istream &in);
     void load(const std::string &filename);
 
-    void export_rows(std::ostream &out, const std::set<size_t> &prefix_indices = {}) const;
+    void make_column_prefix(size_t i) { prefix_indices_.insert(i); }
 
-    void export_rows(const std::string &filename, const std::set<size_t> &prefix_indices = {}) const;
+    template <class Iterator>
+    void make_columns_prefix(const Iterator &begin, const Iterator &end) { prefix_indices_.insert(begin, end); }
+
+    void export_rows(std::ostream &out, bool permute = true) const;
+    void export_rows(const std::string &filename, bool permute = true) const;
 
     ExactHashAnnotation::kmer_storage_t::const_iterator begin() const { return annotation_exact.kmer_map_.begin(); }
     ExactHashAnnotation::kmer_storage_t::const_iterator end() const { return annotation_exact.kmer_map_.end(); }
 
     size_t num_columns() const { return annotation_exact.size(); }
 
+    size_t num_prefix_columns() const { return prefix_indices_.size(); }
+
     size_t size() const { return annotation_exact.get_num_edges(); }
 
-    std::map<size_t, size_t> compute_permutation_map(const std::set<size_t> &prefix_indices) const;
+    std::map<size_t, size_t> compute_permutation_map() const;
 
     std::vector<size_t> permute_indices(const std::vector<size_t> &a, const std::map<size_t, size_t> &index_map) const;
 
   private:
     ExactHashAnnotation annotation_exact;
     const DeBruijnGraphWrapper &graph_;
+    std::set<size_t> prefix_indices_;
+
 };
 
 

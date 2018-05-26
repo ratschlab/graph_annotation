@@ -297,34 +297,32 @@ TEST(Annotate, ExportColsWithWithoutRearrange) {
         EXPECT_LT(0, graph.get_num_edges());
 
         // compute column permutation map
-        std::set<size_t> prefix_cols = {2, 5};
+        std::vector<size_t> prefix_cols = {2, 5};
+        precise.make_columns_prefix(prefix_cols.begin(), prefix_cols.end());
+        auto index_map = precise.compute_permutation_map();
         ASSERT_GT(precise.num_columns(), *prefix_cols.rbegin());
-        auto index_map = precise.compute_permutation_map(prefix_cols);
-        ASSERT_EQ(precise.num_columns(), index_map.size());
-
-        // check if prefix columns are in beginning
-        size_t count = 0;
-        for (auto i : prefix_cols) {
-            ASSERT_EQ(count, index_map[i]);
-            count++;
-        }
-
-        // check if bijection
-        for (auto m : index_map) {
-            ASSERT_NE(index_map.end(), index_map.find(m.second));
-        }
+        ASSERT_EQ(prefix_cols.size(), precise.num_prefix_columns());
 
         // dump data
         std::ofstream os(test_dump_basename + "_precise");
         std::ofstream os_rearrange(test_dump_basename + "_rearrange");
-        precise.export_rows(os);
-        precise.export_rows(os_rearrange, prefix_cols);
-        os.close();
+        std::ofstream os_precise(test_dump_basename + "_precise2");
+        precise.export_rows(os, false);
+        precise.export_rows(os_rearrange);
+        precise.serialize(os_precise);
         os_rearrange.close();
-
+        os.close();
+        os_precise.close();
+        
         // reload data
         std::ifstream is(test_dump_basename + "_precise");
         std::ifstream is_rearrange(test_dump_basename + "_rearrange");
+        std::ifstream is_precise(test_dump_basename + "_precise2");
+        hash_annotate::PreciseHashAnnotator precise_file(graph);
+        precise_file.load(is_precise);
+        is_precise.close();
+        ASSERT_EQ(precise.num_prefix_columns(), precise_file.num_prefix_columns());
+        ASSERT_EQ(precise.num_columns(), precise_file.num_columns());
 
         // check data
         size_t num_kmers = serialization::loadNumber(is);
@@ -333,8 +331,15 @@ TEST(Annotate, ExportColsWithWithoutRearrange) {
         ASSERT_EQ(graph.get_num_edges(), num_kmers_rearrange);
         for (const auto &kmer : precise) {
             auto cur_annot = serialization::loadNumberVector(is);
-            auto ref_annot = precise.annotation_from_kmer(kmer.first);
-            EXPECT_TRUE(hash_annotate::equal(ref_annot, cur_annot));
+            auto cur_annot_rearrange = serialization::loadNumberVector(is_rearrange);
+            auto ref_annot = precise.annotation_from_kmer(kmer.first, true);
+            auto ref_annot_file = precise_file.annotation_from_kmer(kmer.first, true);
+            ASSERT_TRUE(hash_annotate::equal(ref_annot, cur_annot_rearrange));
+            ASSERT_TRUE(hash_annotate::equal(ref_annot, ref_annot_file));
+            for (auto &curi : index_map) {
+                ASSERT_EQ(hash_annotate::test_bit(ref_annot, curi.second),
+                          hash_annotate::test_bit(cur_annot, curi.first));
+            }
 
             //check if each row is present in at least one category
             size_t i = 0;
@@ -344,19 +349,6 @@ TEST(Annotate, ExportColsWithWithoutRearrange) {
                 i++;
             }
             ASSERT_GT(ref_annot.size(), i);
-
-            auto cur_annot_rearrange = serialization::loadNumberVector(is_rearrange);
-            auto ref_annot_rearrange = precise.annotation_from_kmer(
-                    kmer.first,
-                    prefix_cols);
-            EXPECT_TRUE(hash_annotate::equal(
-                        ref_annot_rearrange,
-                        cur_annot_rearrange));
-
-            for (auto &curi : index_map) {
-                ASSERT_EQ(hash_annotate::test_bit(ref_annot, curi.first),
-                          hash_annotate::test_bit(ref_annot_rearrange, curi.second));
-            }
 
             num_kmers--;
         }
