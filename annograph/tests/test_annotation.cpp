@@ -138,7 +138,7 @@ TEST(Annotate, BloomHashSerialize) {
     auto kmers = generate_kmers(num_random_kmers);
     for (size_t i = 0; i < kmers.size(); ++i) {
         bloom_anno.insert(kmers[i].data(), kmers[i].data() + kmers[i].length(), 0);
-        ASSERT_EQ(1, bloom_anno.find(kmers[i].data(), kmers[i].data() + kmers[i].length(), 0)[0]);
+        ASSERT_EQ(1u, bloom_anno.find(kmers[i].data(), kmers[i].data() + kmers[i].length(), 0)[0]);
     }
     std::ofstream outstream(test_dump_basename + "_bloomser");
     bloom_anno.serialize(outstream);
@@ -285,7 +285,7 @@ TEST(Annotate, ExportColsWithWithoutRearrange) {
                     kmers.begin() + i * size_chunk,
                     kmers.begin() + (i + 1) * size_chunk,
                     std::string(""));
-            EXPECT_LT(0, sequences[i].length());
+            EXPECT_LT(0u, sequences[i].length());
         }
 
         DBGHash graph(k);
@@ -294,7 +294,7 @@ TEST(Annotate, ExportColsWithWithoutRearrange) {
             graph.add_sequence(sequences[i]);
             precise.add_sequence(sequences[i], i);
         }
-        EXPECT_LT(0, graph.get_num_edges());
+        EXPECT_LT(0u, graph.get_num_edges());
 
         // compute column permutation map
         std::vector<size_t> prefix_cols = {2, 5};
@@ -352,7 +352,7 @@ TEST(Annotate, ExportColsWithWithoutRearrange) {
 
             num_kmers--;
         }
-        ASSERT_EQ(0, num_kmers);
+        ASSERT_EQ(0u, num_kmers);
     }
 }
 
