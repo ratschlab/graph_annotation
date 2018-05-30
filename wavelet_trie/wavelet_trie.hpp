@@ -25,7 +25,6 @@ namespace annotate {
     typedef rrr_t beta_t;
     //typedef bv_t beta_t;
     typedef beta_t::rank_1_type rank1_t;
-    typedef beta_t::rank_0_type rank0_t;
 
     bool bit_test(const cpp_int &a, const size_t &col);
     bool bit_test(const std::set<size_t> &a, const size_t &col);

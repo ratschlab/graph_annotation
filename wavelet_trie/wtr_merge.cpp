@@ -33,7 +33,6 @@ int main(int argc, char** argv) {
     std::cout << "sizeof(rrr_t):\t" << sizeof(annotate::rrr_t) << "\n";
     std::cout << "sizeof(sd_t):\t" << sizeof(annotate::sd_t) << "\n";
     std::cout << "sizeof(bv_t:rank1):\t" << sizeof(annotate::rank1_t) << "\n";
-    std::cout << "sizeof(bv_t:rank0):\t" << sizeof(annotate::rank0_t) << "\n";
     std::cout << "sizeof(children):\t" << sizeof(annotate::WaveletTrie::Node*) << "\n";
     std::cout << "sizeof(cpp_int):\t" << sizeof(cpp_int) << "\n";
     std::cout << "sizeof(mpz_t):\t" << sizeof(mpz_t) << "\n";

@@ -783,7 +783,6 @@ namespace annotate {
         std::swap(alpha_, that.alpha_);
         std::swap(beta_, that.beta_);
         std::swap(rank1_, that.rank1_);
-        std::swap(rank0_, that.rank0_);
         std::swap(popcount, that.popcount);
         std::swap(support, that.support);
         std::swap(child_[0], that.child_[0]);
@@ -795,8 +794,7 @@ namespace annotate {
 
     WaveletTrie::Node::Node(const Node &that)
         : alpha_(that.alpha_), beta_(that.beta_),
-          rank1_(that.rank1_), rank0_(that.rank0_),
-          //all_zero(that.all_zero),
+          rank1_(that.rank1_),
           popcount(that.popcount),
           support(that.support) {
         if (that.child_[0]) {
@@ -809,7 +807,7 @@ namespace annotate {
 
     WaveletTrie::Node::Node(Node&& that) noexcept
         : alpha_(std::move(that.alpha_)), beta_(std::move(that.beta_)),
-          rank1_(std::move(that.rank1_)), rank0_(std::move(that.rank0_)),
+          rank1_(std::move(that.rank1_)),
           popcount(that.popcount),
           support(that.support) {
         child_[0] = that.child_[0];
@@ -1414,16 +1412,14 @@ namespace annotate {
     size_t WaveletTrie::Node::rank0(const size_t i) {
         if (!support) {
             sdsl::util::init_support(rank1_, &beta_);
-            sdsl::util::init_support(rank0_, &beta_);
             support = true;
         }
-        return rank0_(i);
+        return i - rank1_(i);
     }
 
     size_t WaveletTrie::Node::rank1(const size_t i) {
         if (!support) {
             sdsl::util::init_support(rank1_, &beta_);
-            sdsl::util::init_support(rank0_, &beta_);
             support = true;
         }
         return rank1_(i);
