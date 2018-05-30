@@ -816,24 +816,8 @@ namespace annotate {
         that.child_[1] = nullptr;
     }
 
-    /*
-    void WaveletTrie::Node::swap(WaveletTrie::Node&& that) {
-        this->alpha_ = that.alpha_;
-        this->beta_ = that.beta_;
-        //this->all_zero = that.all_zero;
-        this->popcount = that.popcount;
-        this->rank1_ = that.rank1_;
-        this->rank0_ = that.rank0_;
-        this->support = that.support;
-        this->child_[0] = that.child_[0];
-        this->child_[1] = that.child_[1];
-        that.child_[0] = NULL;
-        that.child_[1] = NULL;
-    }
-    */
-
     template <class Container>
-    WaveletTrie::WaveletTrie(Container &rows) : WaveletTrie::WaveletTrie(rows.begin(), rows.end()) {}
+    WaveletTrie::WaveletTrie(Container&& rows) : WaveletTrie::WaveletTrie(rows.begin(), rows.end()) {}
 
     WaveletTrie::~WaveletTrie() noexcept {
         delete root;
@@ -924,33 +908,28 @@ namespace annotate {
         }
     }
 
-    void WaveletTrie::Node::fill_ancestors(Node *othnode, bool ind, const size_t i) {
+    void WaveletTrie::Node::fill_ancestors(Node&& othnode, bool ind, const size_t i) {
         // TODO: use i
         std::ignore = i;
         if (child_[ind]) {
-            //if (!ind && othnode->all_zero && !all_zero) {
-            if (!ind && othnode->is_leaf() && !othnode->child_[0] && !othnode->child_[1] && (popcount - othnode->popcount)) {
+            if (!ind && othnode.is_leaf() && !othnode.child_[0] && !othnode.child_[1] && (popcount - othnode.popcount)) {
                 assert(popcount);
-                assert(othnode->popcount == 0);
+                assert(othnode.popcount == 0);
                 //TODO: fix position when i != size()
                 fill_left(true);
             }
         } else {
-            assert(child_[!ind] || (popcount == othnode->popcount));
-            if (othnode->child_[ind]) {
-                std::swap(child_[ind], othnode->child_[ind]);
-                //if (!ind && all_zero && !othnode->all_zero) {
-                if (!ind && (popcount == othnode->popcount) && !othnode->is_leaf()) {
+            assert(child_[!ind] || (popcount == othnode.popcount));
+            if (othnode.child_[ind]) {
+                std::swap(child_[ind], othnode.child_[ind]);
+                if (!ind && (popcount == othnode.popcount) && !othnode.is_leaf()) {
                     //TODO: correct position when i != size() ?
                     fill_left(false);
                 }
-                //all_zero = othnode->all_zero;
-                //assert(!all_zero);
                 assert(popcount);
                 assert(popcount == rank1(size()));
             } else if (!ind && popcount && size() > popcount) {
                 assert(size() - popcount == rank0(size()));
-                //all_zero = false;
                 child_[ind] = new Node(size() - popcount);
             }
         }
@@ -969,7 +948,7 @@ namespace annotate {
         }
         utils::ThreadPool thread_queue(10);
         thread_queue.enqueue([=, &thread_queue, &wtr]() {
-            Node::merge(root, wtr.root, i, thread_queue);
+            Node::merge(*root, const_cast<const Node&>(*wtr.root), i, thread_queue);
         });
         thread_queue.join();
     }
@@ -987,16 +966,21 @@ namespace annotate {
         }
         utils::ThreadPool thread_queue(10);
         thread_queue.enqueue([=, &thread_queue, &wtr]() {
-            Node::merge(root, wtr.root, i, thread_queue);
+            Node::merge(*root, std::move(*wtr.root), i, thread_queue);
         });
         thread_queue.join();
     }
 
-    void WaveletTrie::Node::merge(Node *curnode, Node *othnode, size_t i, utils::ThreadPool &thread_queue) {
-        //if (i == -1llu) {
-        //    i = curnode->size();
-        //}
+    void WaveletTrie::Node::merge(Node &curnode, const Node &othnode, size_t i, utils::ThreadPool &thread_queue) {
+        Node tmp(othnode);
+        merge(curnode, std::move(tmp), i, thread_queue);
+    }
 
+    void WaveletTrie::Node::merge(Node &curnode, Node&& othnode, size_t i, utils::ThreadPool &thread_queue) {
+        merge_(&curnode, &othnode, i, thread_queue);
+    }
+
+    void WaveletTrie::Node::merge_(Node *curnode, Node *othnode, size_t i, utils::ThreadPool &thread_queue) {
         assert(curnode->size());
         assert(othnode->size());
         assert(i <= curnode->size());
@@ -1012,7 +996,7 @@ namespace annotate {
                       << othnode->alpha_ << ":" << othnode->beta_ << ";" << othnode->is_leaf() << "\t->\t";
 #endif
 
-            Node::overlap_prefix_(curnode, othnode);
+            Node::overlap_prefix_(*curnode, *othnode);
 
             //update insertion point and merge betas
             size_t il = i == curnode->size()
@@ -1021,7 +1005,8 @@ namespace annotate {
             size_t ir = i == curnode->size()
                 ? curnode->popcount
                 : curnode->rank1(i);
-            Node::merge_beta_(curnode, othnode, i);
+            assert(othnode);
+            Node::merge_beta_(*curnode, *othnode, i);
 
 #ifndef NPRINT
             std::cout << curnode->alpha_ << ":" << curnode->beta_ << ";" << curnode->is_leaf() << "\t"
@@ -1029,8 +1014,8 @@ namespace annotate {
 #endif
             bool left  = curnode->child_[0] && othnode->child_[0];
             bool right = curnode->child_[1] && othnode->child_[1];
-            curnode->fill_ancestors(othnode, 0, il);
-            curnode->fill_ancestors(othnode, 1, ir);
+            curnode->fill_ancestors(std::move(*othnode), 0, il);
+            curnode->fill_ancestors(std::move(*othnode), 1, ir);
             if ((bool)curnode->child_[0] != (bool)curnode->child_[1]) {
                 std::cerr << "ERROR: merging imbalanced error" << std::endl;
                 exit(1);
@@ -1042,7 +1027,7 @@ namespace annotate {
                     std::lock_guard<std::mutex> lock(merge_mtx);
                     thread_queue.enqueue([=, &thread_queue]() {
                     //thread_queue.push_back(std::async(std::launch::async, [=, &thread_queue]() {
-                        merge(curnode->child_[1], othnode->child_[1], ir, thread_queue);
+                        merge_(curnode->child_[1], othnode->child_[1], ir, thread_queue);
                     });
                     curnode = curnode->child_[0];
                     othnode = othnode->child_[0];
@@ -1051,7 +1036,7 @@ namespace annotate {
                     std::lock_guard<std::mutex> lock(merge_mtx);
                     thread_queue.enqueue([=, &thread_queue]() {
                     //thread_queue.push_back(std::async(std::launch::async, [=, &thread_queue]() {
-                        merge(curnode->child_[0], othnode->child_[0], il, thread_queue);
+                        merge_(curnode->child_[0], othnode->child_[0], il, thread_queue);
                     });
                     curnode = curnode->child_[1];
                     othnode = othnode->child_[1];
@@ -1069,37 +1054,6 @@ namespace annotate {
                 curnode = NULL;
                 othnode = NULL;
             }
-
-            /*
-            if (left) {
-                assert(il <= curnode->child_[0]->size());
-                assert(curnode->size() - curnode->popcount
-                        == curnode->child_[0]->size() + othnode->child_[0]->size()
-                );
-                if (right) {
-//#pragma omp task if (curnode->child_[0]->size() > 32)
-//                    Node::merge(curnode->child_[0], othnode->child_[0], il);
-                    thread_queue.push_back(std::async(std::launch::async, [=, &thread_queue]() {
-                        merge(curnode->child_[0], othnode->child_[0], il, thread_queue);
-                    }));
-                } else {
-                    curnode = curnode->child_[0];
-                    othnode = othnode->child_[0];
-                    i = il;
-                }
-            }
-            if (right) {
-                assert(curnode->popcount);
-                assert(ir <= curnode->child_[1]->size());
-                assert(curnode->popcount == curnode->child_[1]->size() + othnode->child_[1]->size());
-                curnode = curnode->child_[1];
-                othnode = othnode->child_[1];
-                i = ir;
-            } else if (!left) {
-                curnode = NULL;
-                othnode = NULL;
-            }
-            */
         }
     }
 
@@ -1125,11 +1079,10 @@ namespace annotate {
     }
 
     //return true if a change happened
-    bool WaveletTrie::Node::overlap_prefix_(Node *curnode, Node *othnode) {
-        assert(curnode && othnode);
-        assert(curnode->alpha_ && othnode->alpha_);
+    bool WaveletTrie::Node::overlap_prefix_(Node &curnode, Node &othnode) {
+        assert(curnode.alpha_ && othnode.alpha_);
 
-        if (curnode->alpha_ == othnode->alpha_) {
+        if (curnode.alpha_ == othnode.alpha_) {
             return false;
         }
         size_t common_pref = next_different_bit_alpha(curnode, othnode);
@@ -1137,31 +1090,31 @@ namespace annotate {
 #ifndef NPRINT
         std::cout << common_pref << "\t";
 #endif
-        int cur = curnode->move_label_down_(common_pref);
+        int cur = curnode.move_label_down_(common_pref);
 #ifndef NPRINT
-        std::cout << curnode->alpha_ << ":" << curnode->beta_ << ";" << curnode->is_leaf();
+        std::cout << curnode.alpha_ << ":" << curnode.beta_ << ";" << curnode.is_leaf();
         if (cur > -1) {
             //assert(!curnode->all_zero);
-            std::cout << "," << curnode->child_[cur]->alpha_ << ":" << curnode->child_[cur]->beta_ << ";" << curnode->child_[cur]->is_leaf();
+            std::cout << "," << curnode.child_[cur]->alpha_ << ":" << curnode.child_[cur]->beta_ << ";" << curnode.child_[cur]->is_leaf();
         }
         std::cout << "\t";
 #endif
-        int oth = othnode->move_label_down_(common_pref);
+        int oth = othnode.move_label_down_(common_pref);
 #ifndef NPRINT
-        std::cout << othnode->alpha_ << ":" << othnode->beta_ << ";" << othnode->is_leaf();
+        std::cout << othnode.alpha_ << ":" << othnode.beta_ << ";" << othnode.is_leaf();
         if (oth > -1) {
             //assert(!othnode->all_zero);
-            std::cout << "," << othnode->child_[oth]->alpha_ << ":" << othnode->child_[oth]->beta_ << ";" << othnode->child_[oth]->is_leaf();
+            std::cout << "," << othnode.child_[oth]->alpha_ << ":" << othnode.child_[oth]->beta_ << ";" << othnode.child_[oth]->is_leaf();
         }
         std::cout << "\t->\t";
 #endif
         //assert((curnode->all_zero && othnode->all_zero) || (curnode->rank1(curnode->size()) + othnode->rank1(othnode->size())));
-        assert(curnode->alpha_ == othnode->alpha_);
-        if (cur > -1 && oth > -1 && curnode->child_[0] && othnode->child_[0]) {
+        assert(curnode.alpha_ == othnode.alpha_);
+        if (cur > -1 && oth > -1 && curnode.child_[0] && othnode.child_[0]) {
             std::cerr << "ERROR: extra zero bit" << std::endl;
             exit(1);
         }
-        if (cur > -1 && oth > -1 && curnode->child_[1] && othnode->child_[1]) {
+        if (cur > -1 && oth > -1 && curnode.child_[1] && othnode.child_[1]) {
             std::cerr << "ERROR: extra one bit" << std::endl;
             exit(1);
         }
@@ -1238,11 +1191,12 @@ namespace annotate {
         return next_col2;
     }
 
-    size_t WaveletTrie::Node::next_different_bit_alpha(Node *curnode, Node *othnode) {
-        assert(curnode->alpha_ != 0);
-        assert(othnode->alpha_ != 0);
-        auto &cur = curnode->alpha_;
-        auto &oth = othnode->alpha_;
+    size_t WaveletTrie::Node::next_different_bit_alpha(const Node &curnode, const Node &othnode) {
+        assert(curnode.alpha_ != 0);
+        assert(othnode.alpha_ != 0);
+        /*
+        auto &cur = curnode.alpha_;
+        auto &oth = othnode.alpha_;
 
         //TODO: replace this with a single pass
         size_t curmsb = msb(cur);
@@ -1252,16 +1206,24 @@ namespace annotate {
         size_t next_set_bit = next_different_bit_(cur, oth);
         bit_set(cur, curmsb);
         bit_set(oth, othmsb);
+        */
+        auto cur = curnode.alpha_;
+        auto oth = othnode.alpha_;
+        size_t curmsb = msb(cur);
+        size_t othmsb = msb(oth);
+        bit_unset(cur, curmsb);
+        bit_unset(oth, othmsb);
+        size_t next_set_bit = next_different_bit_(cur, oth);
         if (next_set_bit == -1llu) {
-            if (curnode->is_leaf() == othnode->is_leaf()) {
+            if (curnode.is_leaf() == othnode.is_leaf()) {
                 return std::min(curmsb, othmsb);
             }
             return std::max(curmsb, othmsb);
         } else {
-            if (next_set_bit > curmsb && !curnode->is_leaf()) {
+            if (next_set_bit > curmsb && !curnode.is_leaf()) {
                 next_set_bit = curmsb;
             }
-            if (next_set_bit > othmsb && !othnode->is_leaf()) {
+            if (next_set_bit > othmsb && !othnode.is_leaf()) {
                 next_set_bit = othmsb;
             }
         }
@@ -1352,18 +1314,18 @@ namespace annotate {
         return 1;
     }
 
-    void WaveletTrie::Node::merge_beta_(Node *curnode, Node *othnode, size_t i) {
-        assert(othnode);
-        assert(curnode->alpha_ == othnode->alpha_);
-        assert(curnode->popcount == curnode->rank1(curnode->size()));
-        if (!othnode->size()) {
+    void WaveletTrie::Node::merge_beta_(Node &curnode, const Node &othnode, size_t i) {
+        assert(curnode.alpha_ == othnode.alpha_);
+        assert(curnode.popcount == curnode.rank1(curnode.size()));
+        if (!othnode.size()) {
             return;
         }
-        assert(othnode->popcount == othnode->rank1(othnode->size()));
+        // TODO: this test doesn't compile since othnode is now const
+        //assert(othnode.popcount == othnode.rank1(othnode.size()));
         if (i == -1llu) {
-            i = curnode->beta_.size();
+            i = curnode.beta_.size();
         }
-        assert(i <= curnode->beta_.size());
+        assert(i <= curnode.beta_.size());
         /*
 #ifndef NPRINT
         std::cout << i << "\t";
@@ -1393,11 +1355,11 @@ namespace annotate {
         assert(popcount == curnode->popcount + othnode->popcount);
 #endif
         */
-        curnode->popcount += othnode->popcount;
+        curnode.popcount += othnode.popcount;
         //curnode->set_beta_(beta_new);
-        curnode->beta_ = beta_t(insert_range(curnode->beta_, othnode->beta_, i));
-        curnode->support = false;
-        assert(curnode->popcount == curnode->rank1(curnode->size()));
+        curnode.beta_ = beta_t(insert_range(curnode.beta_, othnode.beta_, i));
+        curnode.support = false;
+        assert(curnode.popcount == curnode.rank1(curnode.size()));
     }
 
     /*

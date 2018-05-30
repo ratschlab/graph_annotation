@@ -96,7 +96,7 @@ namespace annotate {
             //WaveletTrie(std::vector<cpp_int>::iterator row_begin, std::vector<cpp_int>::iterator row_end);
 
             template <class Container>
-            WaveletTrie(Container &rows);
+            WaveletTrie(Container&& rows);
 
             //destructor
             ~WaveletTrie() noexcept;
@@ -157,16 +157,13 @@ namespace annotate {
             void fill_beta(const Iterator &row_begin, const Iterator &row_end,
                     const size_t &col, utils::ThreadPool &thread_queue, Prefix prefix = Prefix());
 
-            //swap
-            //void swap(Node&& that);
-
             size_t serialize(std::ostream &out) const;
             size_t load(std::istream &in);
 
             bool operator==(const Node &other) const;
             bool operator!=(const Node &other) const;
 
-            size_t size() { return beta_.size(); }
+            size_t size() const { return beta_.size(); }
 
             void fill_left(bool rightside = false);
 
@@ -176,7 +173,8 @@ namespace annotate {
 
             size_t rank0(const size_t i);
 
-            static void merge(Node *curnode, Node *othnode, size_t i, utils::ThreadPool &thread_queue);
+            static void merge(Node &curnode, Node&& othnode, size_t i, utils::ThreadPool &thread_queue);
+            static void merge(Node &curnode, const Node &othnode, size_t i, utils::ThreadPool &thread_queue);
 
             void print(std::ostream &out = std::cout) const;
 
@@ -184,19 +182,18 @@ namespace annotate {
             alpha_t alpha_ = 1;
             beta_t beta_;
             rank1_t rank1_;
-            rank0_t rank0_;
             Node *child_[2] = {NULL, NULL};
-            //bool all_zero = false;
             size_t popcount = 0;
             bool support = false;
 
         private:
+            static void merge_(Node *curnode, Node *othnode, size_t i, utils::ThreadPool &thread_queue);
 
             template <class IndexContainer>
             static size_t next_different_bit_(const IndexContainer &a, const IndexContainer &b,
                     size_t col = 0, size_t next_col = -1llu);
 
-            static size_t next_different_bit_alpha(Node *curnode, Node *othnode);
+            static size_t next_different_bit_alpha(const Node &curnode, const Node &othnode);
 
             template <class Iterator>
             static Prefix longest_common_prefix(
@@ -213,11 +210,11 @@ namespace annotate {
 
             int move_label_down_(size_t length);
 
-            static bool overlap_prefix_(Node *curnode, Node *othnode);
+            static bool overlap_prefix_(Node &curnode, Node &othnode);
 
-            static void merge_beta_(Node *curnode, Node *othnode, size_t i = -1llu);
+            static void merge_beta_(Node &curnode, const Node &othnode, size_t i = -1llu);
 
-            void fill_ancestors(Node *othnode, bool ind, const size_t i);
+            void fill_ancestors(Node&& othnode, bool ind, const size_t i);
 
             bool is_leaf() const;
 
