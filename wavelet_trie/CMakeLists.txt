@@ -10,7 +10,7 @@ endif()
 string(APPEND CMAKE_CXX_FLAGS " \
   -std=c++14 -Wall \
   -march=native -DNPRINT \
-  -fopenmp -D_THREAD_SAFE -pthread") # -DDBGDEBUG
+  -fopenmp -D_THREAD_SAFE -pthread -g") # -DDBGDEBUG
 
 # Profile build type
 set(CMAKE_CXX_FLAGS_PROFILE "-pg -DNDEBUG -O2 -g")
