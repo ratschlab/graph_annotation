@@ -205,6 +205,14 @@ namespace annotate {
         return curint;
     }
 
+    cpp_int pack_indices(std::set<size_t> &indices) {
+        cpp_int num = 0;
+        for (auto &i : indices) {
+            bit_set(num, i);
+        }
+        return num;
+    }
+
     //TODO: align get_int to blocks in source
     template <typename Vector>
     bv_t insert_zeros(const Vector &target, const size_t count, const size_t i) {
@@ -303,7 +311,7 @@ namespace annotate {
         return merged;
     }
 
-    WaveletTrie::WaveletTrie() : root(NULL) { }
+    WaveletTrie::WaveletTrie() : root(nullptr) { }
 
     size_t WaveletTrie::serialize(std::ostream &out) const {
         if (root)
@@ -582,6 +590,35 @@ namespace annotate {
         }
     }
 
+    // copy constructor
+    WaveletTrie::WaveletTrie(const WaveletTrie &other) {
+        if (other.root) {
+            root = new Node(const_cast<const Node&>(*other.root));
+        }
+    }
+
+    // move constructor
+    WaveletTrie::WaveletTrie(WaveletTrie&& other) noexcept
+        : root(other.root) {
+        other.root = nullptr;
+    }
+
+    // copy assign
+    WaveletTrie& WaveletTrie::operator=(const WaveletTrie &other) {
+        if (&other != this) {
+            WaveletTrie tmp(const_cast<const WaveletTrie&>(other));
+            std::swap(*this, tmp);
+        }
+        return *this;
+    }
+
+    // move assign
+    WaveletTrie& WaveletTrie::operator=(WaveletTrie&& other) noexcept {
+        std::swap(root, other.root);
+        return *this;
+    }
+
+
     template <class Iterator>
     WaveletTrie::WaveletTrie(Iterator row_begin, Iterator row_end) {
         if (row_end > row_begin) {
@@ -734,20 +771,54 @@ namespace annotate {
         alpha_ = alpha;
     }
 
-    WaveletTrie::Node::Node(const WaveletTrie::Node &that)
+    WaveletTrie::Node& WaveletTrie::Node::operator=(const Node &that) {
+        if (&that != this) {
+            Node tmp(that);
+            std::swap(*this, tmp);
+        }
+        return *this;
+    }
+
+    WaveletTrie::Node& WaveletTrie::Node::operator=(Node&& that) noexcept {
+        std::swap(alpha_, that.alpha_);
+        std::swap(beta_, that.beta_);
+        std::swap(rank1_, that.rank1_);
+        std::swap(rank0_, that.rank0_);
+        std::swap(popcount, that.popcount);
+        std::swap(support, that.support);
+        std::swap(child_[0], that.child_[0]);
+        std::swap(child_[1], that.child_[1]);
+        that.child_[0] = nullptr;
+        that.child_[1] = nullptr;
+        return *this;
+    }
+
+    WaveletTrie::Node::Node(const Node &that)
         : alpha_(that.alpha_), beta_(that.beta_),
           rank1_(that.rank1_), rank0_(that.rank0_),
           //all_zero(that.all_zero),
           popcount(that.popcount),
           support(that.support) {
         if (that.child_[0]) {
-            child_[0] = new Node(*that.child_[0]);
+            child_[0] = new Node(const_cast<const Node&>(*that.child_[0]));
         }
         if (that.child_[1]) {
-            child_[1] = new Node(*that.child_[1]);
+            child_[1] = new Node(const_cast<const Node&>(*that.child_[1]));
         }
     }
 
+    WaveletTrie::Node::Node(Node&& that) noexcept
+        : alpha_(std::move(that.alpha_)), beta_(std::move(that.beta_)),
+          rank1_(std::move(that.rank1_)), rank0_(std::move(that.rank0_)),
+          popcount(that.popcount),
+          support(that.support) {
+        child_[0] = that.child_[0];
+        child_[1] = that.child_[1];
+        that.child_[0] = nullptr;
+        that.child_[1] = nullptr;
+    }
+
+    /*
     void WaveletTrie::Node::swap(WaveletTrie::Node&& that) {
         this->alpha_ = that.alpha_;
         this->beta_ = that.beta_;
@@ -761,11 +832,12 @@ namespace annotate {
         that.child_[0] = NULL;
         that.child_[1] = NULL;
     }
+    */
 
     template <class Container>
     WaveletTrie::WaveletTrie(Container &rows) : WaveletTrie::WaveletTrie(rows.begin(), rows.end()) {}
 
-    WaveletTrie::~WaveletTrie() {
+    WaveletTrie::~WaveletTrie() noexcept {
         delete root;
     }
 
@@ -886,7 +958,25 @@ namespace annotate {
         }
     }
 
-    void WaveletTrie::insert(WaveletTrie &wtr, size_t i) {
+    void WaveletTrie::insert(const WaveletTrie &wtr, size_t i) {
+        if (!wtr.root) {
+            return;
+        }
+        if (!root) {
+            root = new Node(const_cast<const Node&>(*wtr.root));
+            return;
+        }
+        if (i == -1llu) {
+            i = size();
+        }
+        utils::ThreadPool thread_queue(10);
+        thread_queue.enqueue([=, &thread_queue, &wtr]() {
+            Node::merge(root, wtr.root, i, thread_queue);
+        });
+        thread_queue.join();
+    }
+
+    void WaveletTrie::insert(WaveletTrie&& wtr, size_t i) {
         if (!wtr.root) {
             return;
         }
@@ -898,20 +988,10 @@ namespace annotate {
             i = size();
         }
         utils::ThreadPool thread_queue(10);
-        //std::vector<std::future<void>> thread_queue;
-        //thread_queue.push_back(std::async(std::launch::async, [=, &thread_queue, &wtr]() {
-        //    Node::merge(root, wtr.root, i, thread_queue);
-        //}));
         thread_queue.enqueue([=, &thread_queue, &wtr]() {
             Node::merge(root, wtr.root, i, thread_queue);
         });
-        //for (size_t i = 0; i < thread_queue.size(); ++i) {
-        //    thread_queue.at(i).get();
-        //}
         thread_queue.join();
-//#pragma omp parallel
-//#pragma omp single nowait
-//        Node::merge(root, wtr.root, i);
     }
 
     void WaveletTrie::Node::merge(Node *curnode, Node *othnode, size_t i, utils::ThreadPool &thread_queue) {
@@ -1037,7 +1117,7 @@ namespace annotate {
         }
     }
 
-    WaveletTrie::Node::~Node() {
+    WaveletTrie::Node::~Node() noexcept {
         if (child_[0]) {
             delete child_[0];
         }

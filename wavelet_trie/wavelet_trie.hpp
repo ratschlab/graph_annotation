@@ -2,6 +2,7 @@
 #define __WAVELET_TRIE___
 
 #include <iostream>
+#include <set>
 #include <fstream>
 #include <sdsl/wavelet_trees.hpp>
 #include <algorithm>
@@ -60,6 +61,8 @@ namespace annotate {
 
     cpp_int load(std::istream &in);
 
+    cpp_int pack_indices(std::set<size_t> &indices);
+
     //template <typename Vector>
     //bv_t insert_zeros(const Vector &target, const size_t count = 0, const size_t i = 0);
 
@@ -79,6 +82,16 @@ namespace annotate {
 
             WaveletTrie();
 
+            // copy constructor
+            WaveletTrie(const WaveletTrie &other);
+
+            // move constructor
+            WaveletTrie(WaveletTrie&& other) noexcept;
+
+            // assign
+            WaveletTrie& operator=(const WaveletTrie& other);
+            WaveletTrie& operator=(WaveletTrie&& other) noexcept;
+
             template <class Iterator>
             WaveletTrie(Iterator row_begin, Iterator row_end);
             //WaveletTrie(std::vector<cpp_int>::iterator row_begin, std::vector<cpp_int>::iterator row_end);
@@ -87,13 +100,14 @@ namespace annotate {
             WaveletTrie(Container &rows);
 
             //destructor
-            ~WaveletTrie();
+            ~WaveletTrie() noexcept;
 
             cpp_int at(size_t i, size_t j = -1llu);
 
             size_t size() const;
 
-            void insert(WaveletTrie &wtr, size_t i = -1llu);
+            void insert(const WaveletTrie &wtr, size_t i = -1llu);
+            void insert(WaveletTrie&& wtr, size_t i = -1llu);
 
             void print();
 
@@ -125,10 +139,16 @@ namespace annotate {
             Node(const cpp_int &alpha, const size_t count);
 
             //destructor
-            ~Node();
+            ~Node() noexcept;
 
             //Copy constructor
             Node(const Node &that);
+
+            //move constructor
+            Node(Node&& that) noexcept;
+
+            Node& operator=(const Node &that);
+            Node& operator=(Node&& that) noexcept;
 
             //Constructor from array
             //template <class Iterator>
@@ -139,7 +159,7 @@ namespace annotate {
                     const size_t &col, utils::ThreadPool &thread_queue, Prefix prefix = Prefix());
 
             //swap
-            void swap(Node&& that);
+            //void swap(Node&& that);
 
             size_t serialize(std::ostream &out) const;
             size_t load(std::istream &in);
