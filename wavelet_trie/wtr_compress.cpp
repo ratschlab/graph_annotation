@@ -104,7 +104,6 @@ std::vector<std::vector<size_t>> read_comma_file_vector(std::istream &in, size_t
 
 
 std::vector<cpp_int> read_strmap_file(
-        std::istream &in,
         std::unordered_map<std::string, std::set<size_t>> &string_map,
         //std::unordered_map<std::string, std::set<size_t>>::iterator &strmap_it,
         size_t maxcount = -1llu,
@@ -130,7 +129,6 @@ std::vector<cpp_int> read_strmap_file(
 }
 
 std::vector<std::set<size_t>> read_strmap_file_set(
-        std::istream &in,
         std::unordered_map<std::string, std::set<size_t>> &string_map,
         size_t maxcount = -1llu) {
     std::vector<std::set<size_t>> nums;
@@ -146,7 +144,6 @@ std::vector<std::set<size_t>> read_strmap_file_set(
 }
 
 std::vector<std::vector<size_t>> read_strmap_file_vector(
-        std::istream &in,
         std::unordered_map<std::string, std::set<size_t>> &string_map,
         size_t maxcount = -1llu) {
     std::vector<std::vector<size_t>> nums;
@@ -303,7 +300,7 @@ int main(int argc, char** argv) {
             while (true) {
                 std::vector<std::vector<size_t>> *nums;
                 if (strmap) {
-                    nums = new std::vector<std::vector<size_t>>(read_strmap_file_vector(fin, string_map, step));
+                    nums = new std::vector<std::vector<size_t>>(read_strmap_file_vector(string_map, step));
                 } else if (read_comma) {
                     nums = new std::vector<std::vector<size_t>>(read_comma_file_vector(fin, step));
                 } else {
@@ -334,7 +331,7 @@ int main(int argc, char** argv) {
                 nums = new std::vector<cpp_int>(read_comma_file(fin, step));
             } else if (strmap) {
                 //read from serialized index set
-                nums = new std::vector<cpp_int>(read_strmap_file(fin, string_map, step, mem_lim));
+                nums = new std::vector<cpp_int>(read_strmap_file(string_map, step, mem_lim));
                 //nums = read_strmap_file(fin, string_map, strmap_it, step);
             } else {
                 nums = new std::vector<cpp_int>(read_raw_file(fin, num_rows, step));

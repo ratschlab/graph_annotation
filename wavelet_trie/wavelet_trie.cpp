@@ -629,6 +629,8 @@ namespace annotate {
     //WaveletTrie::Node::Node(const Iterator &row_begin, const Iterator &row_end,
     void WaveletTrie::Node::fill_beta(const Iterator &row_begin, const Iterator &row_end,
             const size_t &col, utils::ThreadPool &thread_queue, Prefix prefix) {
+        //TODO col already used by Prefi?
+        std::ignore = col;
         if (row_end > row_begin) {
             assert(prefix.col != -1llu);
             assert(!prefix.allequal);
@@ -853,6 +855,8 @@ namespace annotate {
     }
 
     void WaveletTrie::Node::fill_ancestors(Node *othnode, bool ind, const size_t i) {
+        // TODO: use i
+        std::ignore = i;
         if (child_[ind]) {
             //if (!ind && othnode->all_zero && !all_zero) {
             if (!ind && othnode->is_leaf() && !othnode->child_[0] && !othnode->child_[1] && (popcount - othnode->popcount)) {
