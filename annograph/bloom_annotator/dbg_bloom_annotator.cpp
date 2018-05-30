@@ -22,8 +22,10 @@ std::map<size_t, size_t> PreciseHashAnnotator::compute_permutation_map() const {
     return index_map;
 }
 
-std::vector<size_t> PreciseHashAnnotator::permute_indices(const std::vector<size_t> &a, const std::map<size_t, size_t> &index_map) const {
-    std::vector<size_t> b(a.size());
+std::vector<uint64_t>
+PreciseHashAnnotator::permute_indices(const std::vector<uint64_t> &a,
+                                      const std::map<size_t, size_t> &index_map) const {
+    std::vector<uint64_t> b(a.size());
     for (size_t i = 0; i < annotation_exact.size(); ++i) {
         if (test_bit(a, i))
             set_bit(b, index_map.find(i)->second);

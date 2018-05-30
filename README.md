@@ -4,21 +4,20 @@
 - cmake 3.6.1
 - C++14
 - HTSlib
-- GNU GMP (wavelet trie only)
-- boost (wavelet trie only)
+- GNU GMP
+- boost
+- sdsl-lite
 
 ### Install
 1. `git clone --recursive https://github.com/ratschlab/graph_annotation`
-2. go to the **build** directory `mkdir -p annograph/build && cd annograph/build`
-3. compile by `cmake .. && make && ./unit_tests`
+2. Build *sdsl-lite* by `pushd wavelet_trie/external-libraries/sdsl-lite; ./install.sh $(pwd); popd`
+3. go to the **build** directory `mkdir -p annograph/build && cd annograph/build`
+4. compile by `cmake .. && make && ./unit_tests`
 
 Build types: `cmake .. <arguments>` where arguments are:
 
 - `-DCMAKE_BUILD_TYPE=[Debug|Release|Profile]` -- build modes (Debug by default)
 - `-DBUILD_STATIC=ON` -- link statically (OFF by default)
-
-#### Install wavelet trie compressor
-See [wavelet_trie](./wavelet_trie).
 
 ### Typical workflow
 1. Generate graph and uncompressed annotations (`.precise.dbg` and `.rawrows.dbg` files)  

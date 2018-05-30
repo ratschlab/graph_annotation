@@ -241,11 +241,12 @@ TEST(Annotate, HashIteratorEmpty) {
     ASSERT_TRUE(hash_it.is_end());
 }
 
-TEST(Annotate, Annotators) {
-    for (size_t k = 10; k < 90; k += 10) {
+TEST(Annotate, BloomFilter) {
+    for (size_t k = 10; k <= 90; k += 10) {
         auto kmers = generate_kmers(num_random_kmers, k + 1);
         size_t num_seqs = 10;
         size_t size_chunk = kmers.size() / num_seqs;
+
         std::vector<std::string> sequences(num_seqs);
         for (size_t i = 0; i < num_seqs; ++i) {
             sequences[i] = std::accumulate(
@@ -256,23 +257,14 @@ TEST(Annotate, Annotators) {
 
         DBGHash graph(k);
         hash_annotate::PreciseHashAnnotator precise(graph);
+
         for (size_t i = 0; i < num_seqs; ++i) {
             graph.add_sequence(sequences[i]);
             precise.add_sequence(sequences[i], i);
         }
-        EXPECT_EQ(graph.get_num_edges(), precise.size());
 
-        for (auto p : num_threads) {
-            annotate::WaveletTrieAnnotator wtr(precise, graph, p);
-            EXPECT_EQ(graph.get_num_edges(), wtr.size());
-            auto p_it = precise.begin();
-            for (size_t i = 0; i < wtr.size(); ++i) {
-                ASSERT_TRUE(hash_annotate::equal(
-                            precise.annotation_from_kmer(p_it->first),
-                            wtr.annotate_edge(i)));
-                p_it++;
-            }
-        }
+        ASSERT_EQ(graph.get_num_edges(), precise.size());
+
         for (double bloom_fpp = 0.05; bloom_fpp < 1.0; bloom_fpp *= 3) {
             hash_annotate::BloomAnnotator bloom(graph, bloom_fpp);
             for (size_t i = 0; i < num_seqs; ++i) {
@@ -284,6 +276,44 @@ TEST(Annotate, Annotators) {
                 EXPECT_TRUE(hash_annotate::equal(
                             hash_annotate::merge_or(bloom_annot, precise_annot),
                             bloom_annot));
+            }
+        }
+    }
+}
+
+TEST(Annotate, WaveletTrie) {
+    for (size_t k = 10; k <= 90; k += 10) {
+        auto kmers = generate_kmers(num_random_kmers, k + 1);
+        size_t num_seqs = 10;
+        size_t size_chunk = kmers.size() / num_seqs;
+
+        std::vector<std::string> sequences(num_seqs);
+        for (size_t i = 0; i < num_seqs; ++i) {
+            sequences[i] = std::accumulate(
+                    kmers.begin() + i * size_chunk,
+                    kmers.begin() + (i + 1) * size_chunk,
+                    std::string(""));
+        }
+
+        DBGHash graph(k);
+        hash_annotate::PreciseHashAnnotator precise(graph);
+
+        for (size_t i = 0; i < num_seqs; ++i) {
+            graph.add_sequence(sequences[i]);
+            precise.add_sequence(sequences[i], i);
+        }
+
+        ASSERT_EQ(graph.get_num_edges(), precise.size());
+
+        for (auto p : num_threads) {
+            annotate::WaveletTrieAnnotator wtr(precise, graph, p);
+            EXPECT_EQ(graph.get_num_edges(), wtr.size());
+            auto p_it = precise.begin();
+            for (size_t i = 0; i < wtr.size(); ++i) {
+                ASSERT_TRUE(hash_annotate::equal(
+                            precise.annotation_from_kmer(p_it->first),
+                            wtr.annotate_edge(i)));
+                p_it++;
             }
         }
     }

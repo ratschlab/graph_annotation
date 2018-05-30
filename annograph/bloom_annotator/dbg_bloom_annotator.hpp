@@ -90,7 +90,8 @@ class PreciseHashAnnotator : public PreciseAnnotator {
 
     std::map<size_t, size_t> compute_permutation_map() const;
 
-    std::vector<size_t> permute_indices(const std::vector<size_t> &a, const std::map<size_t, size_t> &index_map) const;
+    std::vector<uint64_t> permute_indices(const std::vector<uint64_t> &a,
+                                          const std::map<size_t, size_t> &index_map) const;
 
   private:
     ExactHashAnnotation annotation_exact;
