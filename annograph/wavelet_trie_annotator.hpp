@@ -12,17 +12,18 @@ namespace annotate {
 
 class WaveletTrieAnnotator {
   public:
-    WaveletTrieAnnotator(const hash_annotate::DeBruijnGraphWrapper &graph)
+    WaveletTrieAnnotator(const hash_annotate::DeBruijnGraphWrapper &graph, size_t p = 1)
         : graph_(graph),
-          wt_(new WaveletTrie()),
+          wt_(new WaveletTrie(p)),
           num_columns_(0) {}
     
     WaveletTrieAnnotator(const hash_annotate::PreciseHashAnnotator &precise,
-                         const hash_annotate::DeBruijnGraphWrapper &graph)
+                         const hash_annotate::DeBruijnGraphWrapper &graph,
+                         size_t p = 1)
         : graph_(graph),
           num_columns_(precise.num_columns()) {
         auto annots = extract_raw_annots(precise);
-        wt_ = new WaveletTrie(annots);
+        wt_ = new WaveletTrie(annots, p);
     }
 
     ~WaveletTrieAnnotator() { delete wt_; }

@@ -33,6 +33,8 @@ Config::Config(int argc, const char *argv[]) {
             fasta_anno = true;
         } else if (!strcmp(argv[i], "-k") || !strcmp(argv[i], "--kmer-length")) {
             k = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "-p") || !strcmp(argv[i], "--parallel")) {
+            p = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "--bloom-false-pos-prob")) {
             bloom_fpp = std::stof(argv[++i]);
         } else if (!strcmp(argv[i], "--bloom-bits-per-edge")) {
@@ -108,6 +110,7 @@ void Config::print_usage(const std::string &prog_name, IdentityType identity) {
             fprintf(stderr, "\t-o --outfile-base [STR]\t\tbasename of output file []\n");
             fprintf(stderr, "\t   --mem-cap-gb [INT] \t\tmaximum memory available, in Gb [inf]\n");
             fprintf(stderr, "\t-k --kmer-length [INT] \t\tlength of the k-mer to use [3]\n");
+            fprintf(stderr, "\t-p --parallel [INT] \t\tnumber of threads to use for wavelet trie compression [1]\n");
             fprintf(stderr, "\t   --bloom-false-pos-prob [FLOAT] \tFalse positive probability in bloom filter [-1]\n");
             fprintf(stderr, "\t   --bloom-bits-per-edge [FLOAT] \tBits per edge used in bloom filter annotator [0.4]\n");
             fprintf(stderr, "\t   --bloom-hash-functions [INT] \tNumber of hash functions used in bloom filter [off]\n");

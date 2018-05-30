@@ -21,6 +21,8 @@ struct uint256_t {
     __uint128_t m_high;
 };
 
+std::vector<size_t> num_threads = {1, 4};
+
 std::vector<std::string> generate_kmers(size_t num, size_t k = 82) {
     std::vector<std::string> kmers(num);
     for (auto &kmer : kmers) {
@@ -259,14 +261,17 @@ TEST(Annotate, Annotators) {
             precise.add_sequence(sequences[i], i);
         }
         EXPECT_EQ(graph.get_num_edges(), precise.size());
-        annotate::WaveletTrieAnnotator wtr(precise, graph);
-        EXPECT_EQ(graph.get_num_edges(), wtr.size());
-        auto p_it = precise.begin();
-        for (size_t i = 0; i < wtr.size(); ++i) {
-            ASSERT_TRUE(hash_annotate::equal(
-                        precise.annotation_from_kmer(p_it->first),
-                        wtr.annotate_edge(i)));
-            p_it++;
+
+        for (auto p : num_threads) {
+            annotate::WaveletTrieAnnotator wtr(precise, graph, p);
+            EXPECT_EQ(graph.get_num_edges(), wtr.size());
+            auto p_it = precise.begin();
+            for (size_t i = 0; i < wtr.size(); ++i) {
+                ASSERT_TRUE(hash_annotate::equal(
+                            precise.annotation_from_kmer(p_it->first),
+                            wtr.annotate_edge(i)));
+                p_it++;
+            }
         }
         for (double bloom_fpp = 0.05; bloom_fpp < 1.0; bloom_fpp *= 3) {
             hash_annotate::BloomAnnotator bloom(graph, bloom_fpp);

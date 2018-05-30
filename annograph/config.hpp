@@ -29,6 +29,7 @@ class Config {
     unsigned int memory_available = 0;
     unsigned int bloom_num_hash_functions = 0;
     unsigned int bloom_test_num_kmers = 0;
+    unsigned int p = 1;
 
     double bloom_fpp = -1;
     double bloom_bits_per_edge = -1;

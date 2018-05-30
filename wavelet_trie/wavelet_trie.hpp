@@ -79,7 +79,7 @@ namespace annotate {
     class WaveletTrie {
         public:
 
-            WaveletTrie();
+            WaveletTrie(size_t p = 1);
 
             // copy constructor
             WaveletTrie(const WaveletTrie &other);
@@ -92,11 +92,11 @@ namespace annotate {
             WaveletTrie& operator=(WaveletTrie&& other) noexcept;
 
             template <class Iterator>
-            WaveletTrie(Iterator row_begin, Iterator row_end);
+            WaveletTrie(Iterator row_begin, Iterator row_end, size_t p = 1);
             //WaveletTrie(std::vector<cpp_int>::iterator row_begin, std::vector<cpp_int>::iterator row_end);
 
             template <class Container>
-            WaveletTrie(Container&& rows);
+            WaveletTrie(Container&& rows, size_t p = 1);
 
             //destructor
             ~WaveletTrie() noexcept;
@@ -119,10 +119,15 @@ namespace annotate {
             bool operator==(const WaveletTrie &other) const;
             bool operator!=(const WaveletTrie &other) const;
 
+            size_t get_p() const { return p_; }
+
+            void set_p(size_t p) { p_ = p; }
+
         public:
             class Node;
         private:
             Node* root;
+            size_t p_; // number of threads
         //public:
         //    typedef std::pair<Node*, size_t> iterator;
     };

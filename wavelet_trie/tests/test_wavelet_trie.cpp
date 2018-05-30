@@ -170,14 +170,14 @@ annotate::WaveletTrie merge_wtrs_copy(std::vector<annotate::WaveletTrie> &wtrs) 
     return wts;
 }
 
-void test_wtr(size_t i) {
+void test_wtr(size_t i, size_t p) {
     auto nums = generate_nums(bits[i]);
     std::vector<annotate::WaveletTrie> wtrs;
     generate_wtr(wtrs, nums);
     auto wts = merge_wtrs(wtrs);
     check_wtr(wts, nums, std::to_string(i));
 }
-void test_wtr_step(size_t i) {
+void test_wtr_step(size_t i, size_t p) {
     auto nums = generate_nums(bits[i]);
     constexpr size_t step = 2;
     std::vector<annotate::WaveletTrie> wtrs;
@@ -187,14 +187,14 @@ void test_wtr_step(size_t i) {
     check_wtr(wts, nums);
 }
 
-void test_wtr_copy(size_t i) {
+void test_wtr_copy(size_t i, size_t p) {
     auto nums = generate_nums(bits[i]);
     std::vector<annotate::WaveletTrie> wtrs;
     generate_wtr(wtrs, nums);
     auto wts = merge_wtrs_copy(wtrs);
     check_wtr(wts, nums, std::to_string(i));
 }
-void test_wtr_copy_step(size_t i) {
+void test_wtr_copy_step(size_t i, size_t p) {
     auto nums = generate_nums(bits[i]);
     constexpr size_t step = 2;
     std::vector<annotate::WaveletTrie> wtrs;
@@ -204,7 +204,7 @@ void test_wtr_copy_step(size_t i) {
     check_wtr(wts, nums);
 }
 
-void test_wtr_pairs(size_t i, size_t j) {
+void test_wtr_pairs(size_t i, size_t j, size_t p) {
     auto nums1 = generate_nums(bits[i]);
     auto nums2 = generate_nums(bits[j]);
     std::vector<annotate::WaveletTrie> wtrs;
@@ -218,7 +218,7 @@ void test_wtr_pairs(size_t i, size_t j) {
     auto wts = merge_wtrs(wtrs);
     check_wtr(wts, ref, std::to_string(i) + "," + std::to_string(j));
 }
-void test_wtr_pairs_step(size_t i, size_t j) {
+void test_wtr_pairs_step(size_t i, size_t j, size_t p) {
     auto nums1 = generate_nums(bits[i]);
     auto nums2 = generate_nums(bits[j]);
     constexpr size_t step = 2;
@@ -234,7 +234,7 @@ void test_wtr_pairs_step(size_t i, size_t j) {
     check_wtr(wts, ref, std::to_string(i) + "," + std::to_string(j) + "," + std::to_string(step));
 }
 
-void test_wtr_pairs_copy(size_t i, size_t j) {
+void test_wtr_pairs_copy(size_t i, size_t j, size_t p) {
     auto nums1 = generate_nums(bits[i]);
     auto nums2 = generate_nums(bits[j]);
     std::vector<annotate::WaveletTrie> wtrs;
@@ -249,7 +249,7 @@ void test_wtr_pairs_copy(size_t i, size_t j) {
     check_wtr(wts, ref, std::to_string(i) + "," + std::to_string(j));
 }
 
-void test_wtr_pairs_copy_step(size_t i, size_t j) {
+void test_wtr_pairs_copy_step(size_t i, size_t j, size_t p) {
     auto nums1 = generate_nums(bits[i]);
     auto nums2 = generate_nums(bits[j]);
     constexpr size_t step = 2;
@@ -263,59 +263,77 @@ void test_wtr_pairs_copy_step(size_t i, size_t j) {
     auto wts = merge_wtrs_copy(wtrs);
     check_wtr(wts, ref, std::to_string(i) + "," + std::to_string(j) + "," + std::to_string(step));
 }
+
+std::vector<size_t> num_threads = {1, 4};
 
 TEST(WaveletTrie, TestSingle) {
-    for (size_t i = 0; i < bits.size(); ++i) {
-        test_wtr(i);
+    for (auto p : num_threads) {
+        for (size_t i = 0; i < bits.size(); ++i) {
+            test_wtr(i, p);
+        }
     }
 }
 
 TEST(WaveletTrie, TestSingleStep) {
-    for (size_t i = 0; i < bits.size(); ++i) {
-        test_wtr_step(i);
+    for (auto p : num_threads) {
+        for (size_t i = 0; i < bits.size(); ++i) {
+            test_wtr_step(i, p);
+        }
     }
 }
 
 TEST(WaveletTrie, TestSingleCopy) {
-    for (size_t i = 0; i < bits.size(); ++i) {
-        test_wtr_copy(i);
+    for (auto p : num_threads) {
+        for (size_t i = 0; i < bits.size(); ++i) {
+            test_wtr_copy(i, p);
+        }
     }
 }
 
 TEST(WaveletTrie, TestSingleCopyStep) {
-    for (size_t i = 0; i < bits.size(); ++i) {
-        test_wtr_copy_step(i);
+    for (auto p : num_threads) {
+        for (size_t i = 0; i < bits.size(); ++i) {
+            test_wtr_copy_step(i, p);
+        }
     }
 }
 
 TEST(WaveletTrie, TestPairs) {
-    for (size_t i = 0; i < bits.size(); ++i) {
-        for (size_t j = 0; j < bits.size(); ++j) {
-            test_wtr_pairs(i, j);
+    for (auto p : num_threads) {
+        for (size_t i = 0; i < bits.size(); ++i) {
+            for (size_t j = 0; j < bits.size(); ++j) {
+                test_wtr_pairs(i, j, p);
+            }
         }
     }
 }
 
 TEST(WaveletTrie, TestPairsStep) {
-    for (size_t i = 0; i < bits.size(); ++i) {
-        for (size_t j = 0; j < bits.size(); ++j) {
-            test_wtr_pairs_step(i, j);
+    for (auto p : num_threads) {
+        for (size_t i = 0; i < bits.size(); ++i) {
+            for (size_t j = 0; j < bits.size(); ++j) {
+                test_wtr_pairs_step(i, j, p);
+            }
         }
     }
 }
 
 TEST(WaveletTrie, TestPairsCopy) {
-    for (size_t i = 0; i < bits.size(); ++i) {
-        for (size_t j = 0; j < bits.size(); ++j) {
-            test_wtr_pairs_copy(i, j);
+    for (auto p : num_threads) {
+        for (size_t i = 0; i < bits.size(); ++i) {
+            for (size_t j = 0; j < bits.size(); ++j) {
+                test_wtr_pairs_copy(i, j, p);
+            }
         }
     }
 }
 
 TEST(WaveletTrie, TestPairsStepCopy) {
-    for (size_t i = 0; i < bits.size(); ++i) {
-        for (size_t j = 0; j < bits.size(); ++j) {
-            test_wtr_pairs_copy_step(i, j);
+    for (auto p : num_threads) {
+        for (size_t i = 0; i < bits.size(); ++i) {
+            for (size_t j = 0; j < bits.size(); ++j) {
+                test_wtr_pairs_copy_step(i, j, p);
+            }
         }
     }
 }

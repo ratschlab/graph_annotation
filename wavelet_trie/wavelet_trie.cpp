@@ -311,7 +311,7 @@ namespace annotate {
         return merged;
     }
 
-    WaveletTrie::WaveletTrie() : root(nullptr) { }
+    WaveletTrie::WaveletTrie(size_t p) : root(nullptr), p_(p) { }
 
     size_t WaveletTrie::serialize(std::ostream &out) const {
         if (root)
@@ -591,7 +591,8 @@ namespace annotate {
     }
 
     // copy constructor
-    WaveletTrie::WaveletTrie(const WaveletTrie &other) {
+    WaveletTrie::WaveletTrie(const WaveletTrie &other)
+        : p_(other.p_) {
         if (other.root) {
             root = new Node(const_cast<const Node&>(*other.root));
         }
@@ -599,7 +600,8 @@ namespace annotate {
 
     // move constructor
     WaveletTrie::WaveletTrie(WaveletTrie&& other) noexcept
-        : root(other.root) {
+        : root(other.root),
+          p_(other.p_) {
         other.root = nullptr;
     }
 
@@ -615,12 +617,14 @@ namespace annotate {
     // move assign
     WaveletTrie& WaveletTrie::operator=(WaveletTrie&& other) noexcept {
         std::swap(root, other.root);
+        std::swap(p_, other.p_);
         return *this;
     }
 
 
     template <class Iterator>
-    WaveletTrie::WaveletTrie(Iterator row_begin, Iterator row_end) {
+    WaveletTrie::WaveletTrie(Iterator row_begin, Iterator row_end, size_t p)
+        : p_(p) {
         if (row_end > row_begin) {
             Prefix prefix = WaveletTrie::Node::longest_common_prefix(row_begin, row_end, 0);
             if (prefix.allequal) {
@@ -639,7 +643,7 @@ namespace annotate {
 //#pragma omp parallel
 //#pragma omp single nowait
                 //std::vector<std::future<void>> thread_queue;
-                utils::ThreadPool thread_queue(10);
+                utils::ThreadPool thread_queue(p_);
                 //thread_queue.reserve(row_end - row_begin);
                 root = new Node();
                 root->set_alpha_(*row_begin, 0, prefix.col);
@@ -817,7 +821,7 @@ namespace annotate {
     }
 
     template <class Container>
-    WaveletTrie::WaveletTrie(Container&& rows) : WaveletTrie::WaveletTrie(rows.begin(), rows.end()) {}
+    WaveletTrie::WaveletTrie(Container&& rows, size_t p) : WaveletTrie::WaveletTrie(rows.begin(), rows.end(), p) {}
 
     WaveletTrie::~WaveletTrie() noexcept {
         delete root;
@@ -947,7 +951,7 @@ namespace annotate {
             i = size();
         }
         WaveletTrie tmp(wtr);
-        utils::ThreadPool thread_queue(10);
+        utils::ThreadPool thread_queue(p_);
         thread_queue.enqueue([=, &thread_queue, &tmp]() {
             Node::merge_(root, tmp.root, i, thread_queue);
         });
@@ -965,7 +969,7 @@ namespace annotate {
         if (i == -1llu) {
             i = size();
         }
-        utils::ThreadPool thread_queue(10);
+        utils::ThreadPool thread_queue(p_);
         thread_queue.enqueue([=, &thread_queue, &wtr]() {
             Node::merge_(root, wtr.root, i, thread_queue);
         });
@@ -1381,11 +1385,11 @@ namespace annotate {
         return rank1_(i);
     }
 
-    template WaveletTrie::WaveletTrie(std::vector<cpp_int>::iterator&, std::vector<cpp_int>::iterator&);
-    template WaveletTrie::WaveletTrie(std::vector<cpp_int>&);
-    template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>::iterator&, std::vector<std::set<size_t>>::iterator&);
-    template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>&);
-    template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>::iterator&, std::vector<std::vector<size_t>>::iterator&);
-    template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>&);
+    template WaveletTrie::WaveletTrie(std::vector<cpp_int>::iterator&, std::vector<cpp_int>::iterator&, size_t);
+    template WaveletTrie::WaveletTrie(std::vector<cpp_int>&, size_t);
+    template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>::iterator&, std::vector<std::set<size_t>>::iterator&, size_t);
+    template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>&, size_t);
+    template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>::iterator&, std::vector<std::vector<size_t>>::iterator&, size_t);
+    template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>&, size_t);
 
 };

@@ -305,7 +305,7 @@ int main(int argc, const char *argv[]) {
         std::cout << timer.elapsed() << std::endl;
         std::cout << "Computing wavelet trie...\t" << std::flush;
         timer.reset();
-        annotate::WaveletTrieAnnotator wt_annotator(*precise_annotator, hashing_graph);
+        annotate::WaveletTrieAnnotator wt_annotator(*precise_annotator, hashing_graph, config->p);
         wt_annotator.serialize(config->outfbase + ".wtr.dbg");
         std::cout << timer.elapsed() << std::endl;
     }
