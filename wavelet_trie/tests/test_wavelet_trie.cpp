@@ -12,22 +12,69 @@ std::vector<annotate::cpp_int> generate_nums(std::vector<std::set<size_t>> &bits
     return nums;
 }
 
-void test_wtr(std::vector<annotate::cpp_int>&& nums) {
-    std::vector<annotate::cpp_int> ref(nums.begin(), nums.end());
-    annotate::WaveletTrie wt(nums);
-    ASSERT_EQ(ref.size(), wt.size());
-    for (size_t i = 0; i < ref.size(); ++i) {
-        EXPECT_EQ(ref.at(i), wt.at(i));
+void check_wtr(annotate::WaveletTrie &wt, const std::vector<annotate::cpp_int> &nums) {
+    ASSERT_EQ(nums.size(), wt.size());
+    for (size_t i = 0; i < nums.size(); ++i) {
+        EXPECT_EQ(nums.at(i), wt.at(i));
     }
 }
 
-TEST(WaveletTrie, Test0) {
-    std::vector<std::set<size_t>> bits;
-    test_wtr(generate_nums(bits));
+// Note: the vector needs to be a copy, since WaveletTrie modifies it
+void generate_wtr(std::vector<annotate::WaveletTrie*> &wtrs, std::vector<annotate::cpp_int> nums, size_t step = -1llu) {
+    auto it = nums.begin();
+    while (step < -1llu && it + step <= nums.end()) {
+        wtrs.push_back(new annotate::WaveletTrie(it, it + step));
+        it += step;
+    }
+    if (it != nums.end())
+        wtrs.push_back(new annotate::WaveletTrie(it, nums.end()));
 }
 
-TEST(WaveletTrie, Test1) {
-    std::vector<std::set<size_t>> bits {
+// TODO: this only works as a pointer, since destructor for int_vector fails when static
+annotate::WaveletTrie* merge_wtrs(std::vector<annotate::WaveletTrie*> &wtrs) {
+    annotate::WaveletTrie *wts = new annotate::WaveletTrie();
+    for (auto &wtr : wtrs) {
+        wts->insert(*wtr);
+        delete wtr;
+    }
+    return wts;
+}
+
+void test_wtr(std::vector<annotate::cpp_int>&& nums) {
+    constexpr size_t step = 2;
+    std::vector<annotate::WaveletTrie*> wtrs;
+
+    generate_wtr(wtrs, nums, step);
+    auto wts = merge_wtrs(wtrs);
+    check_wtr(*wts, nums);
+    delete wts;
+    wtrs.clear();
+
+    generate_wtr(wtrs, nums);
+    wts = merge_wtrs(wtrs);
+    check_wtr(*wts, nums);
+    delete wts;
+}
+
+void test_wtr_pairs(std::vector<annotate::cpp_int>&& nums1, std::vector<annotate::cpp_int>&& nums2) {
+    constexpr size_t step = 2;
+    std::vector<annotate::WaveletTrie*> wtrs;
+    std::vector<annotate::cpp_int> ref;
+    ref.reserve(nums1.size() + nums2.size());
+    ref.insert(ref.end(), nums1.begin(), nums1.end());
+    ref.insert(ref.end(), nums2.begin(), nums2.end());
+
+    generate_wtr(wtrs, nums1, step);
+    generate_wtr(wtrs, nums2, step);
+    auto wts = merge_wtrs(wtrs);
+    check_wtr(*wts, ref);
+    delete wts;
+    wtrs.clear();
+}
+
+std::vector<std::vector<std::set<size_t>>> bits {
+    {}, // 0
+    {   // 1
         {4},
         {2},
         {4},
@@ -35,107 +82,59 @@ TEST(WaveletTrie, Test1) {
         {4},
         {2},
         {2}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test2) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {   // 2
         {3},
         {2},
         {2, 3}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test3) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {   // 3
         {3},
         {2},
         {2, 3},
         {3, 4, 5}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test4) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1},
         {1, 3}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test5) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1},
         {1, 2}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test6) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1},
         {1, 3, 4}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test7) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1, 4},
         {1, 3, 4}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test8) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1},
         {1, 7},
         {1, 5, 7},
         {1, 3, 7}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test9) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {0},
         {1},
         {1}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test10) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1},
         {5}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test11) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1},
         {1, 5}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test12) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {0},
         {1},
         {5}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test13) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {0},
         {1},
         {5},
@@ -143,58 +142,34 @@ TEST(WaveletTrie, Test13) {
         {5},
         {1},
         {5}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test14) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1},
         {3},
         {1, 3},
         {1}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test15) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1, 3}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test16) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1},
         {1, 3},
         {1, 3, 4},
         {1},
         {1, 3},
         {1, 3}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test17) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {3, 4},
         {3, 4, 6},
         {3, 4, 6, 7, 8, 9}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test18) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {3, 4, 6, 7, 8, 9, 10},
         {3, 4, 6, 7, 9}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test19) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1},
         {3},
         {1},
@@ -202,31 +177,36 @@ TEST(WaveletTrie, Test19) {
         {1},
         {3},
         {1, 3}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test20) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1, 3, 5},
         {1, 3, 4, 6},
         {1, 3, 4},
         {1, 2, 3, 5},
         {1, 2, 3, 4, 6},
         {1, 2, 3, 4}
-    };
-    test_wtr(generate_nums(bits));
-}
-
-TEST(WaveletTrie, Test21) {
-    std::vector<std::set<size_t>> bits {
+    },
+    {
         {1, 3, 5},
         {1, 3, 4, 6},
         {1, 3, 4},
         {0, 1, 2, 3, 5},
         {0, 1, 2, 3, 4, 6},
         {1, 2, 3, 4, 4}
-    };
-    test_wtr(generate_nums(bits));
+    }
+};
+
+TEST(WaveletTrie, TestSingle) {
+    for (auto &bitset : bits) {
+        test_wtr(generate_nums(bitset));
+    }
+}
+
+TEST(WaveletTrie, TestPairs) {
+    for (auto &bitset1 : bits) {
+        for (auto &bitset2 : bits) {
+            test_wtr_pairs(generate_nums(bitset1), generate_nums(bitset2));
+        }
+    }
 }
 
