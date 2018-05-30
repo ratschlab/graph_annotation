@@ -81,6 +81,8 @@ CyclicMultiHash::CyclicMultiHash(const char *data, size_t k, size_t num_hash)
     for (uint32_t j = 0; j < hashes_.size(); ++j) {
         auto *cyclic_hash = new CyclicHasher_(static_cast<int>(k_), j, j + 1, 64lu);
         for (size_t i = 0; i < k_; ++i) {
+            if (!data[i])
+                break;
             cyclic_hash->eat(static_cast<unsigned char>(data[i]));
         }
         chashers_[j] = cyclic_hash;
