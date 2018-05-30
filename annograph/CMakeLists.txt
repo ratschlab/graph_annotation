@@ -10,7 +10,7 @@ endif()
 string(APPEND CMAKE_CXX_FLAGS " \
   -std=c++14 -Wall -Wextra -Werror \
   -msse4.2 -mavx -mavx2 -mbmi -mbmi2 \
-  -fopenmp -D_THREAD_SAFE -pthread") # -DDBGDEBUG
+  -fopenmp -D_THREAD_SAFE -pthread -DNPRINT") # -DDBGDEBUG
 
 # Profile build type
 set(CMAKE_CXX_FLAGS_PROFILE "-pg -DNDEBUG -O2 -g")
@@ -24,17 +24,19 @@ set(CMAKE_VERBOSE_MAKEFILE 1)
 cmake_policy(SET CMP0015 NEW)
 
 link_directories(
+  ../wavelet_trie/external-libraries/sdsl-lite/lib
 )
 
 include_directories(
   bloom_annotator
+  ../wavelet_trie
 )
 
 add_subdirectory(
   bloom_annotator
 )
 
-file(GLOB src_files "*.cpp")
+file(GLOB src_files "*.cpp" "../wavelet_trie/wavelet_trie.cpp" "../wavelet_trie/thread_pool.cpp")
 
 list(FILTER src_files EXCLUDE REGEX ".*\\._.*")
 list(FILTER src_files EXCLUDE REGEX ".*main.cpp")
@@ -44,13 +46,17 @@ add_executable(annograph "annotation_main.cpp")
 
 set(METALIBS
   -lhts -lz -lbz2
-  -lssl -lcrypto -llzma
+  -lssl -lcrypto -llzma -lsdsl -lgmp
 )
 
 if(BUILD_STATIC)
   set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} -static)
   set(METALIBS ${METALIBS} -lcurl)
 endif()
+
+target_include_directories(
+  annographlibs PUBLIC ../wavelet_trie/external-libraries/sdsl-lite/include
+)
 
 target_link_libraries(
   annographlibs bloom_annotator ${METALIBS}

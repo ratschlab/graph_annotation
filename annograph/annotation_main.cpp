@@ -11,6 +11,7 @@
 #include "utils.hpp"
 #include "vcf_parser.hpp"
 #include "dbg_bloom_annotator.hpp"
+#include "wavelet_trie_annotator.hpp"
 #include "unix_tools.hpp"
 
 KSEQ_INIT(gzFile, gzread);
@@ -300,7 +301,12 @@ int main(int argc, const char *argv[]) {
         std::cout << "Serializing precise annotation...\t" << std::flush;
         timer.reset();
         precise_annotator->serialize(config->outfbase + ".precise.dbg");
-        precise_annotator->export_rows(config->outfbase + ".anno.rawrows.dbg");
+        //precise_annotator->export_rows(config->outfbase + ".anno.rawrows.dbg");
+        std::cout << timer.elapsed() << std::endl;
+        std::cout << "Computing wavelet trie...\t" << std::flush;
+        timer.reset();
+        annotate::WaveletTrieAnnotator wt_annotator(*precise_annotator, hashing_graph);
+        wt_annotator.serialize(config->outfbase + ".wtr.dbg");
         std::cout << timer.elapsed() << std::endl;
     }
 

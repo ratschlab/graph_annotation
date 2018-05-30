@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "dbg_bloom_annotator.hpp"
+#include "wavelet_trie_annotator.hpp"
 #include "serialization.hpp"
 #include "hashers.hpp"
 #include "dbg_hash.hpp"
@@ -258,6 +259,15 @@ TEST(Annotate, Annotators) {
             precise.add_sequence(sequences[i], i);
         }
         EXPECT_EQ(graph.get_num_edges(), precise.size());
+        annotate::WaveletTrieAnnotator wtr(precise, graph);
+        EXPECT_EQ(graph.get_num_edges(), wtr.size());
+        auto p_it = precise.begin();
+        for (size_t i = 0; i < wtr.size(); ++i) {
+            ASSERT_TRUE(hash_annotate::equal(
+                        precise.annotation_from_kmer(p_it->first),
+                        wtr.annotate_edge(i)));
+            p_it++;
+        }
         for (double bloom_fpp = 0.05; bloom_fpp < 1.0; bloom_fpp *= 3) {
             hash_annotate::BloomAnnotator bloom(graph, bloom_fpp);
             for (size_t i = 0; i < num_seqs; ++i) {
@@ -294,7 +304,9 @@ TEST(Annotate, ExportColsWithWithoutRearrange) {
             graph.add_sequence(sequences[i]);
             precise.add_sequence(sequences[i], i);
         }
-        EXPECT_LT(0u, graph.get_num_edges());
+        EXPECT_EQ(graph.get_num_edges(), precise.size());
+        annotate::WaveletTrieAnnotator wtr(precise, graph);
+        EXPECT_EQ(precise.size(), wtr.size());
 
         // compute column permutation map
         std::vector<size_t> prefix_cols = {2, 5};
@@ -302,40 +314,62 @@ TEST(Annotate, ExportColsWithWithoutRearrange) {
         auto index_map = precise.compute_permutation_map();
         ASSERT_GT(precise.num_columns(), *prefix_cols.rbegin());
         ASSERT_EQ(prefix_cols.size(), precise.num_prefix_columns());
+        annotate::WaveletTrieAnnotator wtr_rearr(precise, graph);
+        ASSERT_EQ(wtr.size(), wtr_rearr.size());
 
         // dump data
         std::ofstream os(test_dump_basename + "_precise");
         std::ofstream os_rearrange(test_dump_basename + "_rearrange");
         std::ofstream os_precise(test_dump_basename + "_precise2");
+        std::ofstream os_wtr(test_dump_basename + "_wtr");
+        std::ofstream os_wtrr(test_dump_basename + "_wtrr");
         precise.export_rows(os, false);
         precise.export_rows(os_rearrange);
         precise.serialize(os_precise);
-        os_rearrange.close();
+        wtr.serialize(os_wtr);
+        wtr_rearr.serialize(os_wtrr);
         os.close();
+        os_rearrange.close();
         os_precise.close();
+        os_wtr.close();
+        os_wtrr.close();
         
         // reload data
         std::ifstream is(test_dump_basename + "_precise");
         std::ifstream is_rearrange(test_dump_basename + "_rearrange");
         std::ifstream is_precise(test_dump_basename + "_precise2");
+        std::ifstream is_wtr(test_dump_basename + "_wtr");
+        std::ifstream is_wtrr(test_dump_basename + "_wtrr");
         hash_annotate::PreciseHashAnnotator precise_file(graph);
         precise_file.load(is_precise);
+        annotate::WaveletTrieAnnotator wtr_file(graph);
+        wtr_file.load(is_wtr);
+        annotate::WaveletTrieAnnotator wtr_filer(graph);
+        wtr_filer.load(is_wtrr);
         is_precise.close();
         ASSERT_EQ(precise.num_prefix_columns(), precise_file.num_prefix_columns());
         ASSERT_EQ(precise.num_columns(), precise_file.num_columns());
+        ASSERT_EQ(wtr.size(), wtr_file.size());
+        ASSERT_EQ(wtr.size(), wtr_filer.size());
 
         // check data
         size_t num_kmers = serialization::loadNumber(is);
         size_t num_kmers_rearrange = serialization::loadNumber(is_rearrange);
         ASSERT_EQ(graph.get_num_edges(), num_kmers);
         ASSERT_EQ(graph.get_num_edges(), num_kmers_rearrange);
+        size_t wtr_i = 0;
         for (const auto &kmer : precise) {
             auto cur_annot = serialization::loadNumberVector(is);
             auto cur_annot_rearrange = serialization::loadNumberVector(is_rearrange);
             auto ref_annot = precise.annotation_from_kmer(kmer.first, true);
             auto ref_annot_file = precise_file.annotation_from_kmer(kmer.first, true);
+            auto wtr_filer_annot = wtr_filer.annotate_edge(wtr_i);
             ASSERT_TRUE(hash_annotate::equal(ref_annot, cur_annot_rearrange));
             ASSERT_TRUE(hash_annotate::equal(ref_annot, ref_annot_file));
+            ASSERT_TRUE(hash_annotate::equal(wtr.annotate_edge(wtr_i), wtr_file.annotate_edge(wtr_i)));
+            ASSERT_TRUE(hash_annotate::equal(cur_annot, wtr_file.annotate_edge(wtr_i)));
+            ASSERT_TRUE(hash_annotate::equal(ref_annot, wtr_filer.annotate_edge(wtr_i)));
+            wtr_i++;
             for (auto &curi : index_map) {
                 ASSERT_EQ(hash_annotate::test_bit(ref_annot, curi.second),
                           hash_annotate::test_bit(cur_annot, curi.first));
