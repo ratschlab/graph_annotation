@@ -1,5 +1,5 @@
-#ifndef __UTILS_HPP__
-#define __UTILS_HPP__
+#ifndef __THREAD_POOL_HPP__
+#define __THREAD_POOL_HPP__
 
 #include <cstdint>
 #include <string>
@@ -65,4 +65,4 @@ namespace utils {
 
 } // namespace utils
 
-#endif // __UTILS_HPP__
+#endif // __THREAD_POOL_HPP__

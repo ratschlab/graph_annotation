@@ -793,7 +793,7 @@ namespace annotate {
         return annot;
     }
 
-    size_t WaveletTrie::size() {
+    size_t WaveletTrie::size() const {
         return root ? root->size() : 0;
     }
 

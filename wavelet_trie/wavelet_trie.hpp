@@ -10,7 +10,7 @@
 #include <functional>
 #include <boost/multiprecision/gmp.hpp>
 
-#include "utils.hpp"
+#include "thread_pool.hpp"
 
 
 namespace annotate {
@@ -91,7 +91,7 @@ namespace annotate {
 
             cpp_int at(size_t i, size_t j = -1llu);
 
-            size_t size();
+            size_t size() const;
 
             void insert(WaveletTrie &wtr, size_t i = -1llu);
 
