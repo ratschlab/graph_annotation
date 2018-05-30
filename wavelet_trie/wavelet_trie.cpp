@@ -946,9 +946,10 @@ namespace annotate {
         if (i == -1llu) {
             i = size();
         }
+        WaveletTrie tmp(wtr);
         utils::ThreadPool thread_queue(10);
-        thread_queue.enqueue([=, &thread_queue, &wtr]() {
-            Node::merge(*root, const_cast<const Node&>(*wtr.root), i, thread_queue);
+        thread_queue.enqueue([=, &thread_queue, &tmp]() {
+            Node::merge_(root, tmp.root, i, thread_queue);
         });
         thread_queue.join();
     }
@@ -966,21 +967,14 @@ namespace annotate {
         }
         utils::ThreadPool thread_queue(10);
         thread_queue.enqueue([=, &thread_queue, &wtr]() {
-            Node::merge(*root, std::move(*wtr.root), i, thread_queue);
+            Node::merge_(root, wtr.root, i, thread_queue);
         });
         thread_queue.join();
     }
 
-    void WaveletTrie::Node::merge(Node &curnode, const Node &othnode, size_t i, utils::ThreadPool &thread_queue) {
-        Node tmp(othnode);
-        merge(curnode, std::move(tmp), i, thread_queue);
-    }
-
-    void WaveletTrie::Node::merge(Node &curnode, Node&& othnode, size_t i, utils::ThreadPool &thread_queue) {
-        merge_(&curnode, &othnode, i, thread_queue);
-    }
-
     void WaveletTrie::Node::merge_(Node *curnode, Node *othnode, size_t i, utils::ThreadPool &thread_queue) {
+        assert(curnode);
+        assert(othnode);
         assert(curnode->size());
         assert(othnode->size());
         assert(i <= curnode->size());

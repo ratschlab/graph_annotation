@@ -173,9 +173,6 @@ namespace annotate {
 
             size_t rank0(const size_t i);
 
-            static void merge(Node &curnode, Node&& othnode, size_t i, utils::ThreadPool &thread_queue);
-            static void merge(Node &curnode, const Node &othnode, size_t i, utils::ThreadPool &thread_queue);
-
             void print(std::ostream &out = std::cout) const;
 
         protected:
