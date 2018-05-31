@@ -101,7 +101,7 @@ namespace annotate {
             //destructor
             ~WaveletTrie() noexcept;
 
-            cpp_int at(size_t i, size_t j = -1llu);
+            cpp_int at(size_t i, size_t j = -1llu) const;
 
             size_t size() const;
 

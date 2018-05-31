@@ -826,7 +826,7 @@ namespace annotate {
         delete root;
     }
 
-    cpp_int WaveletTrie::at(size_t i, size_t j) {
+    cpp_int WaveletTrie::at(size_t i, size_t j) const {
         assert(i < size());
         Node *node = root;
         size_t length = 0;
@@ -1385,7 +1385,7 @@ namespace annotate {
     }
 
     template WaveletTrie::WaveletTrie(std::vector<cpp_int>::iterator&, std::vector<cpp_int>::iterator&, size_t);
-    template WaveletTrie::WaveletTrie(std::vector<cpp_int>&, size_t);
+    template WaveletTrie::WaveletTrie(std::vector<cpp_int>&&, size_t);
     template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>::iterator&, std::vector<std::set<size_t>>::iterator&, size_t);
     template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>&, size_t);
     template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>::iterator&, std::vector<std::vector<size_t>>::iterator&, size_t);
