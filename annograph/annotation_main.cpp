@@ -275,8 +275,8 @@ int main(int argc, const char *argv[]) {
     if (annotator)
         std::cout << "Bloom filter\t" << bloom_const_time << std::endl;
     if (precise_annotator) {
-        std::cout << "Precise filter\t" << precise_const_time << std::endl;
-        std::cout << "# Annotation types\t" << annot_map.size() << std::endl;
+        std::cout << "Index set\t" << precise_const_time << std::endl;
+        std::cout << "# colors\t" << annot_map.size() << std::endl;
     }
     if (annotator && precise_annotator && config->bloom_test_num_kmers) {
         //Check FPP
@@ -286,28 +286,38 @@ int main(int argc, const char *argv[]) {
         std::cout << timer.elapsed() << "sec" << std::endl;
     }
 
-    std::cout << "Graph size(edges):\t" << hashing_graph.get_num_edges() << std::endl;
+    std::cout << "Graph edges:\t" << hashing_graph.get_num_edges() << std::endl;
+    std::cout << "Annotation matrix size\t"
+              << hashing_graph.get_num_edges() * annot_map.size() / 8
+              << " bytes" << std::endl;
 
     // output and cleanup
 
     // graph output
     if (!config->outfbase.empty() && config->infbase.empty()) {
-        hashing_graph.serialize(config->outfbase + ".graph.dbg");
+        std::cout << "Serializing hash graph\t" << std::flush;
+        std::cout << hashing_graph.serialize(config->outfbase + ".graph.dbg")
+                  << " bytes" << std::endl;
     }
-    if (!config->outfbase.empty() && annotator)
-        annotator->serialize(config->outfbase + ".anno.dbg");
+    if (!config->outfbase.empty() && annotator) {
+        std::cout << "Serializing bloom filters\t" << std::flush;
+        std::cout << annotator->serialize(config->outfbase + ".anno.dbg")
+                  << " bytes" << std::endl;
+    }
 
     if (!config->outfbase.empty() && precise_annotator && config->infbase.empty()) {
-        std::cout << "Serializing precise annotation...\t" << std::flush;
+        std::cout << "Serializing index set\t" << std::flush;
         timer.reset();
-        precise_annotator->serialize(config->outfbase + ".precise.dbg");
         //precise_annotator->export_rows(config->outfbase + ".anno.rawrows.dbg");
-        std::cout << timer.elapsed() << std::endl;
-        std::cout << "Computing wavelet trie...\t" << std::flush;
+        std::cout << precise_annotator->serialize(config->outfbase + ".precise.dbg")
+                  << " bytes\t"
+                  << timer.elapsed() << " s" << std::endl;
+        std::cout << "Computing wavelet trie\t" << std::flush;
         timer.reset();
         annotate::WaveletTrieAnnotator wt_annotator(*precise_annotator, hashing_graph, config->p);
-        wt_annotator.serialize(config->outfbase + ".wtr.dbg");
-        std::cout << timer.elapsed() << std::endl;
+        std::cout << wt_annotator.serialize(config->outfbase + ".wtr.dbg")
+                  << " bytes\t"
+                  << timer.elapsed() << " s" << std::endl;
     }
 
     if (annotator)
