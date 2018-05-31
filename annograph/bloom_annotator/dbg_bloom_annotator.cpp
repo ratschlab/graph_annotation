@@ -22,6 +22,21 @@ std::map<size_t, size_t> PreciseHashAnnotator::compute_permutation_map() const {
     return index_map;
 }
 
+std::map<size_t, size_t> PreciseHashAnnotator::compute_permutation_map(
+        size_t num_columns,
+        const std::set<size_t> &prefix_indices) {
+    std::map<size_t, size_t> index_map;
+    size_t index_size = 0;
+    for (auto i : prefix_indices) {
+        index_map[i] = index_size++;
+    }
+    for (size_t i = 0; i < num_columns; ++i) {
+        index_size += index_map.emplace(i, index_size).second;
+    }
+    assert(index_size == num_columns);
+    return index_map;
+}
+
 std::vector<uint64_t>
 PreciseHashAnnotator::permute_indices(const std::vector<uint64_t> &a,
                                       const std::map<size_t, size_t> &index_map) const {
@@ -34,10 +49,14 @@ PreciseHashAnnotator::permute_indices(const std::vector<uint64_t> &a,
 }
 
 uint64_t PreciseHashAnnotator::serialize(std::ostream &out) const {
-    uint64_t written_bytes = annotation_exact.serialize(out);
+    uint64_t written_bytes = 0;
+
     written_bytes += serialization::serializeNumber(out, prefix_indices_.size());
     for (auto i : prefix_indices_)
         written_bytes += serialization::serializeNumber(out, i);
+
+    written_bytes += annotation_exact.serialize(out);
+
     return written_bytes;
 }
 
@@ -47,11 +66,12 @@ uint64_t PreciseHashAnnotator::serialize(const std::string &filename) const {
 }
 
 void PreciseHashAnnotator::load(std::istream &in) {
-    annotation_exact.load(in);
     size_t num_prefix_cols = serialization::loadNumber(in);
     prefix_indices_.clear();
     while (num_prefix_cols--)
         prefix_indices_.insert(serialization::loadNumber(in));
+
+    annotation_exact.load(in);
 }
 
 void PreciseHashAnnotator::load(const std::string &filename) {
@@ -66,10 +86,16 @@ uint64_t PreciseHashAnnotator::export_rows(std::ostream &out, bool permute) cons
     if (permute && prefix_indices_.size()) {
         index_map = compute_permutation_map();
     }
+    /*
     for (auto &kmer : annotation_exact.kmer_map_) {
         auto annot = annotation_from_kmer(kmer.first);
         written_bytes += serialization::serializeNumberVector(out,
                 index_map.size() ? permute_indices(annot, index_map) : annot);
+    }
+    */
+    for (size_t i = 0; i < size(); ++i) {
+        auto annot = annotate_edge(i, permute);
+        written_bytes += serialization::serializeNumberVector(out, annot);
     }
     return written_bytes;
 }
@@ -426,10 +452,29 @@ BloomAnnotator::kmer_from_index(DeBruijnGraphWrapper::edge_index index) const {
     return graph_.get_node_kmer(index) + graph_.get_edge_label(index);
 }
 
+std::string
+PreciseHashAnnotator::get_kmer(DeBruijnGraphWrapper::edge_index i) const {
+    return graph_.get_node_kmer(i) + graph_.get_edge_label(i);
+}
+
 std::vector<uint64_t>
-PreciseHashAnnotator::annotate_edge(DeBruijnGraphWrapper::edge_index i) const {
-    auto kmer_edge = graph_.get_node_kmer(i) + graph_.get_edge_label(i);
-    return annotation_from_kmer(kmer_edge);
+PreciseHashAnnotator::annotate_edge(DeBruijnGraphWrapper::edge_index i, bool permute) const {
+    return annotation_from_kmer(get_kmer(i), permute);
+}
+
+std::set<size_t>
+PreciseHashAnnotator::annotate_edge_indices(DeBruijnGraphWrapper::edge_index i, bool permute) const {
+    auto find = annotation_exact.kmer_map_.find(get_kmer(i));
+    if (find == annotation_exact.kmer_map_.end())
+        return {};
+    if (!permute)
+        return find->second;
+    auto index_map = compute_permutation_map();
+    std::set<size_t> find_mapped;
+    for (auto i : find->second) {
+        find_mapped.insert(index_map[i]);
+    }
+    return find_mapped;
 }
 
 std::vector<uint64_t>

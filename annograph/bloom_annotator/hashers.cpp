@@ -254,6 +254,7 @@ bool ExactHashAnnotation::operator!=(const ExactHashAnnotation &that) const {
 
 uint64_t ExactHashAnnotation::serialize(std::ostream &out) const {
     uint64_t written_bytes = 0;
+    written_bytes += serialization::serializeNumber(out, num_columns_);
     written_bytes += serialization::serializeNumber(out, kmer_map_.size());
     for (auto &it : kmer_map_) {
         written_bytes += serialization::serializeNumber(out, it.second.size());
@@ -262,7 +263,6 @@ uint64_t ExactHashAnnotation::serialize(std::ostream &out) const {
         }
         written_bytes += serialization::serializeString(out, it.first);
     }
-    written_bytes += serialization::serializeNumber(out, num_columns_);
     return written_bytes;
 }
 
@@ -272,6 +272,8 @@ uint64_t ExactHashAnnotation::serialize(const std::string &filename) const {
 }
 
 void ExactHashAnnotation::load(std::istream &in) {
+    num_columns_ = serialization::loadNumber(in);
+
     kmer_map_.clear();
     size_t kmer_map_size = serialization::loadNumber(in);
     while (kmer_map_size--) {
@@ -282,7 +284,6 @@ void ExactHashAnnotation::load(std::istream &in) {
         }
         kmer_map_[serialization::loadString(in)] = nums;
     }
-    num_columns_ = serialization::loadNumber(in);
 }
 
 void ExactHashAnnotation::load(const std::string &filename) {

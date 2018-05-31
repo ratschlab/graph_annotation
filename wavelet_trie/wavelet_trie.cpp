@@ -1390,5 +1390,6 @@ namespace annotate {
     template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>&, size_t);
     template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>::iterator&, std::vector<std::vector<size_t>>::iterator&, size_t);
     template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>&, size_t);
+    template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>&&, size_t);
 
 };

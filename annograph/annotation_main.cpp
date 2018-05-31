@@ -48,6 +48,7 @@ int main(int argc, const char *argv[]) {
 
     hash_annotate::BloomAnnotator *annotator = NULL;
     hash_annotate::PreciseHashAnnotator *precise_annotator = NULL;
+    annotate::WaveletTrieAnnotator *wt_annotator = NULL;
 
     double graph_const_time = 0;
     double precise_const_time = 0;
@@ -60,9 +61,6 @@ int main(int argc, const char *argv[]) {
         std::cout << "Loading graph file" << std::endl;
         hashing_graph.load(config->infbase + ".graph.dbg");
         graph_const_time += result_timer.elapsed();
-        result_timer.reset();
-        precise_annotator->load(config->infbase + ".precise.dbg");
-        precise_const_time += result_timer.elapsed();
     }
 
     if (config->bloom_fpp > -0.5
@@ -90,6 +88,16 @@ int main(int argc, const char *argv[]) {
         std::cout << "\tBits per edge:\t" << annotator->size_factor() << std::endl;
         std::cout << "\tNum hash functions:\t" << annotator->num_hash_functions() << std::endl;
         std::cout << "\tApprox false pos prob:\t" << annotator->approx_false_positive_rate() << std::endl;
+    }
+    if (!config->infbase.empty()) {
+        if (annotator) {
+            result_timer.reset();
+            precise_annotator->load(config->infbase + ".precise.dbg");
+            precise_const_time += result_timer.elapsed();
+        } else {
+            delete precise_annotator;
+            precise_annotator = nullptr;
+        }
     }
 
     bool has_vcf = false;
@@ -279,7 +287,8 @@ int main(int argc, const char *argv[]) {
         std::cout << "Bloom filter\t" << bloom_const_time << std::endl;
     if (precise_annotator) {
         std::cout << "Index set\t" << precise_const_time << std::endl;
-        std::cout << "# colors\t" << annot_map.size() << std::endl;
+        std::cout << "# colors\t" << precise_annotator->num_columns() << std::endl;
+        std::cout << "# class indicators\t" << precise_annotator->num_prefix_columns() << std::endl;
     }
     if (annotator && precise_annotator && config->bloom_test_num_kmers) {
         //Check FPP
@@ -290,10 +299,6 @@ int main(int argc, const char *argv[]) {
     }
 
     std::cout << "Graph edges:\t" << hashing_graph.get_num_edges() << std::endl;
-    std::cout << "Annotation matrix size\t"
-              << hashing_graph.get_num_edges() * annot_map.size() / 8
-              << " bytes" << std::endl;
-
     // output and cleanup
 
     // graph output
@@ -308,11 +313,21 @@ int main(int argc, const char *argv[]) {
                   << " bytes" << std::endl;
     }
 
-    if (precise_annotator && config->wavelet_trie) {
+    if (config->wavelet_trie) {
         std::cout << "Computing wavelet trie\t" << std::flush;
         timer.reset();
-        annotate::WaveletTrieAnnotator wt_annotator(*precise_annotator, hashing_graph, config->p);
-        std::cout << wt_annotator.serialize(config->outfbase + ".wtr.dbg")
+        if (precise_annotator) {
+            wt_annotator = new annotate::WaveletTrieAnnotator(*precise_annotator, hashing_graph, config->p);
+        } else {
+            std::ifstream in(config->infbase + ".precise.dbg");
+            if (!in.good()) {
+                std::cerr << "ERROR: corrupt precise annotator. Please reconstruct it."
+                          << std::endl;
+                exit(1);
+            }
+            wt_annotator = new annotate::WaveletTrieAnnotator(in, hashing_graph, config->p);
+        }
+        std::cout << wt_annotator->serialize(config->outfbase + ".wtr.dbg")
                   << " bytes\t"
                   << timer.elapsed() << " s" << std::endl;
     }
@@ -326,10 +341,21 @@ int main(int argc, const char *argv[]) {
                   << timer.elapsed() << " s" << std::endl;
     }
 
+    std::cout << "Annotation matrix size\t"
+              << hashing_graph.get_num_edges()
+              * (precise_annotator ? precise_annotator->num_columns() : (
+                    wt_annotator ? wt_annotator->num_columns() : 0
+                    )
+                )
+              / 8
+              << " bytes" << std::endl;
+
     if (annotator)
         delete annotator;
     if (precise_annotator)
         delete precise_annotator;
+    if (wt_annotator)
+        delete wt_annotator;
 
     return 0;
 }

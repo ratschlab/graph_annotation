@@ -69,6 +69,7 @@ Config::Config(int argc, const char *argv[]) {
         }
     }
 
+    /*
     if (!fname.size()) {
         std::string line;
         while (std::getline(std::cin, line)) {
@@ -76,10 +77,11 @@ Config::Config(int argc, const char *argv[]) {
                 fname.push_back(line);
         }
     }
+    */
 
     bool print_usage_and_exit = false;
 
-    if (!fname.size())
+    if (!fname.size() && infbase.empty())
         print_usage_and_exit = true;
 
     // if misused, provide help screen for chosen identity and exit

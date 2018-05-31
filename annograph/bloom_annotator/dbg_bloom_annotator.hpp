@@ -44,11 +44,11 @@ class DeBruijnGraphWrapper {
 
 };
 
-
 class PreciseAnnotator {
   public:
     virtual ~PreciseAnnotator() {}
-    virtual std::vector<uint64_t> annotate_edge(DeBruijnGraphWrapper::edge_index i) const = 0;
+    virtual std::vector<uint64_t> annotate_edge(DeBruijnGraphWrapper::edge_index i,
+                                                bool permute = false) const = 0;
 };
 
 
@@ -63,7 +63,10 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     void add_column(const std::string &sequence, bool rooted = false);
 
     std::vector<uint64_t> annotation_from_kmer(const std::string &kmer, bool permute = false) const;
-    std::vector<uint64_t> annotate_edge(DeBruijnGraphWrapper::edge_index i) const;
+    std::vector<uint64_t> annotate_edge(DeBruijnGraphWrapper::edge_index i, bool permute = false) const;
+    std::set<size_t> annotate_edge_indices(DeBruijnGraphWrapper::edge_index i, bool permute = false) const;
+
+    std::string get_kmer(DeBruijnGraphWrapper::edge_index i) const;
 
     uint64_t serialize(std::ostream &out) const;
     uint64_t serialize(const std::string &filename) const;
@@ -79,9 +82,6 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     uint64_t export_rows(std::ostream &out, bool permute = true) const;
     uint64_t export_rows(const std::string &filename, bool permute = true) const;
 
-    ExactHashAnnotation::kmer_storage_t::const_iterator begin() const { return annotation_exact.kmer_map_.begin(); }
-    ExactHashAnnotation::kmer_storage_t::const_iterator end() const { return annotation_exact.kmer_map_.end(); }
-
     size_t num_columns() const { return annotation_exact.size(); }
 
     size_t num_prefix_columns() const { return prefix_indices_.size(); }
@@ -89,17 +89,26 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     size_t size() const { return annotation_exact.get_num_edges(); }
 
     std::map<size_t, size_t> compute_permutation_map() const;
+    static std::map<size_t, size_t> compute_permutation_map(size_t num_columns, const std::set<size_t> &prefix_indices);
 
     std::vector<uint64_t> permute_indices(const std::vector<uint64_t> &a,
                                           const std::map<size_t, size_t> &index_map) const;
 
+    bool operator==(const PreciseHashAnnotator &that) const {
+        return (annotation_exact == that.annotation_exact)
+            && std::equal(prefix_indices_.begin(), prefix_indices_.end(),
+                          that.prefix_indices_.begin(), that.prefix_indices_.end())
+            && (&graph_ == &that.graph_);
+    }
+
   private:
     ExactHashAnnotation annotation_exact;
+  protected:
     const DeBruijnGraphWrapper &graph_;
+  private:
     std::set<size_t> prefix_indices_;
 
 };
-
 
 class BloomAnnotator {
   public:

@@ -3,6 +3,10 @@
 #include "gtest/gtest.h"
 
 #include "utils.hpp"
+#include "serialization.hpp"
+
+const std::string test_data_dir = "../tests/data";
+const std::string test_dump_basename = test_data_dir + "/dump_test";
 
 
 TEST(get_filetype, VCF) {
@@ -71,4 +75,21 @@ TEST(seq_equal, basics) {
     EXPECT_TRUE(utils::seq_equal(std::string("ABAAACD"), std::string("BAAAACD"), 6));
     EXPECT_TRUE(utils::seq_equal(std::string("ABAAACD"), std::string("BAAAACD"), 7));
     EXPECT_TRUE(utils::seq_equal(std::string("ABAAACD"), std::string("BAAAACD"), 100));
+}
+
+TEST(Serialization, Zero) {
+    for (size_t num = 0; num < 1000000; num += 1000) {
+        std::ofstream out(test_dump_basename + "_serial");
+        serialization::serializeNumber(out, num);
+        out.close();
+
+        std::ifstream in(test_dump_basename + "_serial");
+        ASSERT_EQ(num, serialization::loadNumber(in));
+    }
+    std::ofstream out(test_dump_basename + "_serial");
+    serialization::serializeNumber(out, -1llu);
+    out.close();
+
+    std::ifstream in(test_dump_basename + "_serial");
+    ASSERT_EQ(-1llu, serialization::loadNumber(in));
 }

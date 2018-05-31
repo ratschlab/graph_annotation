@@ -305,16 +305,92 @@ TEST(Annotate, WaveletTrie) {
 
         ASSERT_EQ(graph.get_num_edges(), precise.size());
 
+        std::vector<annotate::WaveletTrieAnnotator> wtrs;
+
         for (auto p : num_threads) {
+            //std::cout << "Checking normal" << std::endl;
             annotate::WaveletTrieAnnotator wtr(precise, graph, p);
             EXPECT_EQ(graph.get_num_edges(), wtr.size());
-            auto p_it = precise.begin();
             for (size_t i = 0; i < wtr.size(); ++i) {
                 ASSERT_TRUE(hash_annotate::equal(
-                            precise.annotation_from_kmer(p_it->first),
+                            precise.annotate_edge(i),
                             wtr.annotate_edge(i)));
-                p_it++;
             }
+            wtrs.push_back(wtr);
+            //std::cout << "Serializing" << std::endl;
+            std::ofstream out(test_dump_basename + "_wtr");
+            wtr.serialize(out);
+            out.close();
+
+            //std::cout << "Loading" << std::endl;
+            std::ifstream in(test_dump_basename + "_wtr");
+            annotate::WaveletTrieAnnotator wtr_out(graph, p);
+            wtr_out.load(in);
+            wtrs.push_back(wtr_out);
+            in.close();
+
+
+            //std::cout << "Dumping precise" << std::endl;
+            out.open(test_dump_basename + "_precise");
+            precise.serialize(out);
+            out.close();
+
+            in.open(test_dump_basename + "_precise");
+            hash_annotate::PreciseHashAnnotator precise_file(graph);
+
+            //std::cout << "Loading precise" << std::endl;
+            precise_file.load(in);
+
+            //std::cout << "Checking precise" << std::endl;
+            ASSERT_EQ(precise, precise_file);
+            in.close();
+
+            //std::cout << "Construct from object" << std::endl;
+            annotate::WaveletTrieAnnotator wtr_file(precise_file, graph, p);
+            EXPECT_EQ(graph.get_num_edges(), wtr_file.size());
+            for (size_t i = 0; i < wtr_file.size(); ++i) {
+                ASSERT_TRUE(hash_annotate::equal(
+                            precise_file.annotate_edge(i),
+                            wtr_file.annotate_edge(i)));
+            }
+            wtrs.push_back(wtr_file);
+
+            //std::cout << "Construct from file" << std::endl;
+            in.open(test_dump_basename + "_precise");
+            annotate::WaveletTrieAnnotator wtr_file2(in, graph, p);
+            EXPECT_EQ(graph.get_num_edges(), wtr_file2.size());
+            for (size_t i = 0; i < wtr_file2.size(); ++i) {
+                ASSERT_TRUE(hash_annotate::equal(
+                            precise_file.annotate_edge(i),
+                            wtr_file2.annotate_edge(i)))
+                    << "FAILED ON " << p << " threads\n"
+                    << "INDEX " << i << "\n"
+                    << precise_file.annotate_edge(i)[0] << "\t"
+                    << wtr_file2.annotate_edge(i)[0] << "\t"
+                    << "NumPrefix " << precise_file.num_prefix_columns()
+                    << std::endl;
+            }
+            wtrs.push_back(wtr_file2);
+            in.close();
+
+            //std::cout << "Serialization" << std::endl;
+            out.open(test_dump_basename + "_wtr");
+            wtr_file.serialize(out);
+            wtr_file2.serialize(out);
+            out.close();
+            in.open(test_dump_basename + "_wtr");
+            annotate::WaveletTrieAnnotator wtr_file3(graph, p);
+            annotate::WaveletTrieAnnotator wtr_file4(graph, p);
+            wtr_file3.load(in);
+            wtr_file4.load(in);
+            in.close();
+            wtrs.push_back(wtr_file3);
+            wtrs.push_back(wtr_file4);
+        }
+
+        //std::cout << "Checking equality" << std::endl;
+        for (size_t i = 1; i < wtrs.size(); ++i) {
+            ASSERT_EQ(wtrs[i - 1], wtrs[i]);
         }
     }
 }
@@ -377,6 +453,7 @@ TEST(Annotate, ExportColsWithWithoutRearrange) {
         std::ifstream is_wtrr(test_dump_basename + "_wtrr");
         hash_annotate::PreciseHashAnnotator precise_file(graph);
         precise_file.load(is_precise);
+        ASSERT_EQ(precise, precise_file);
         annotate::WaveletTrieAnnotator wtr_file(graph);
         wtr_file.load(is_wtr);
         annotate::WaveletTrieAnnotator wtr_filer(graph);
@@ -393,11 +470,14 @@ TEST(Annotate, ExportColsWithWithoutRearrange) {
         ASSERT_EQ(graph.get_num_edges(), num_kmers);
         ASSERT_EQ(graph.get_num_edges(), num_kmers_rearrange);
         size_t wtr_i = 0;
-        for (const auto &kmer : precise) {
+        ASSERT_EQ(precise.size(), num_kmers);
+        for (size_t j = 0; j < precise.size(); ++j) {
             auto cur_annot = serialization::loadNumberVector(is);
             auto cur_annot_rearrange = serialization::loadNumberVector(is_rearrange);
-            auto ref_annot = precise.annotation_from_kmer(kmer.first, true);
-            auto ref_annot_file = precise_file.annotation_from_kmer(kmer.first, true);
+            auto ref_annot = precise.annotate_edge(j, true);
+            //auto ref_annot = precise.annotation_from_kmer(kmer.first, true);
+            auto ref_annot_file = precise_file.annotate_edge(j, true);
+            //auto ref_annot_file = precise_file.annotation_from_kmer(kmer.first, true);
             auto wtr_filer_annot = wtr_filer.annotate_edge(wtr_i);
             ASSERT_TRUE(hash_annotate::equal(ref_annot, cur_annot_rearrange));
             ASSERT_TRUE(hash_annotate::equal(ref_annot, ref_annot_file));
@@ -418,10 +498,7 @@ TEST(Annotate, ExportColsWithWithoutRearrange) {
                 i++;
             }
             ASSERT_GT(ref_annot.size(), i);
-
-            num_kmers--;
         }
-        ASSERT_EQ(0u, num_kmers);
     }
 }
 
