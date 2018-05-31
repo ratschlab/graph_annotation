@@ -28,6 +28,7 @@ Build types: `cmake .. <arguments>` where arguments are:
 `./annograph build -i <OUTPREFIXX> -o <WTROUTPREFIX> --wavelet-trie <FLAGS> <INPUTS>`
 
 ## bioRxiv preprint
-This code was used to produce the results in the bioRxiv preprint, _[Dynamic compression schemes for graph coloring](https://www.biorxiv.org/content/early/2018/03/17/239806)_ by Harun Mustafa, Ingo Schilken, Mikhail Karasikov, Carsten Eickhoff, Gunnar Ratsch, and Andre Kahles. 
+This code was used to produce the results in our bioRxiv preprint
+> [_Dynamic compression schemes for graph coloring_](https://www.biorxiv.org/content/early/2018/03/17/239806) by Harun Mustafa, Ingo Schilken, Mikhail Karasikov, Carsten Eickhoff, Gunnar Ratsch, and Andre Kahles. 
 
 The input data used for those experiments is located [here](https://public.bmi.inf.ethz.ch/projects/2018/graph-anno/).
