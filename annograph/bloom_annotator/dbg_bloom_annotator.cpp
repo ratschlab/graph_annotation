@@ -33,17 +33,17 @@ PreciseHashAnnotator::permute_indices(const std::vector<uint64_t> &a,
     return b;
 }
 
-void PreciseHashAnnotator::serialize(std::ostream &out) const {
-    annotation_exact.serialize(out);
-    serialization::serializeNumber(out, prefix_indices_.size());
+uint64_t PreciseHashAnnotator::serialize(std::ostream &out) const {
+    uint64_t written_bytes = annotation_exact.serialize(out);
+    written_bytes += serialization::serializeNumber(out, prefix_indices_.size());
     for (auto i : prefix_indices_)
-        serialization::serializeNumber(out, i);
+        written_bytes += serialization::serializeNumber(out, i);
+    return written_bytes;
 }
 
-void PreciseHashAnnotator::serialize(const std::string &filename) const {
+uint64_t PreciseHashAnnotator::serialize(const std::string &filename) const {
     std::ofstream fout(filename);
-    serialize(fout);
-    fout.close();
+    return serialize(fout);
 }
 
 void PreciseHashAnnotator::load(std::istream &in) {
@@ -60,23 +60,23 @@ void PreciseHashAnnotator::load(const std::string &filename) {
     fin.close();
 }
 
-void PreciseHashAnnotator::export_rows(std::ostream &out, bool permute) const {
-    serialization::serializeNumber(out, annotation_exact.kmer_map_.size());
+uint64_t PreciseHashAnnotator::export_rows(std::ostream &out, bool permute) const {
+    uint64_t written_bytes = serialization::serializeNumber(out, annotation_exact.kmer_map_.size());
     std::map<size_t, size_t> index_map;
     if (permute && prefix_indices_.size()) {
         index_map = compute_permutation_map();
     }
     for (auto &kmer : annotation_exact.kmer_map_) {
         auto annot = annotation_from_kmer(kmer.first);
-        serialization::serializeNumberVector(out, 
+        written_bytes += serialization::serializeNumberVector(out,
                 index_map.size() ? permute_indices(annot, index_map) : annot);
     }
+    return written_bytes;
 }
 
-void PreciseHashAnnotator::export_rows(const std::string &filename, bool permute) const {
+uint64_t PreciseHashAnnotator::export_rows(const std::string &filename, bool permute) const {
     std::ofstream fout(filename);
-    export_rows(fout, permute);
-    fout.close();
+    return export_rows(fout, permute);
 }
 
 void PreciseHashAnnotator::add_sequence(const std::string &sequence,
@@ -189,7 +189,8 @@ void BloomAnnotator::add_sequence(const std::string &sequence, size_t column, si
     if (annotation[column].size() == 0) {
         annotation[column].resize(static_cast<size_t>(
             bloom_size_factor_
-            * static_cast<double>(num_elements ? num_elements : preprocessed_seq.size() - graph_.get_k())
+            * static_cast<double>(num_elements ? num_elements
+                                               : preprocessed_seq.size() - graph_.get_k())
             + 1
         ));
         if (annotation[column].size() == 0) {
@@ -301,7 +302,8 @@ BloomAnnotator::get_annotation_corrected(DeBruijnGraphWrapper::edge_index i,
     assert(orig_kmer.back() == graph_.get_edge_label(indices[(back + 1) % indices.size()]));
     path = 0;
     while (graph_.has_the_only_incoming_edge(indices[(back + 1) % indices.size()])
-            && (!check_both_directions || graph_.has_the_only_outgoing_edge(indices[(back + 1) % indices.size()]))
+            && (!check_both_directions
+                || graph_.has_the_only_outgoing_edge(indices[(back + 1) % indices.size()]))
             && path++ < path_cutoff) {
         const_cast<size_t&>(total_traversed_)++;
 
@@ -390,14 +392,13 @@ void BloomAnnotator::test_fp_all(const PreciseAnnotator &annotation_exact,
     std::cout << "Total traversed: " << total_traversed_ << "\n";
 }
 
-void BloomAnnotator::serialize(std::ostream &out) const {
-    annotation.serialize(out);
+uint64_t BloomAnnotator::serialize(std::ostream &out) const {
+    return annotation.serialize(out);
 }
 
-void BloomAnnotator::serialize(const std::string &filename) const {
+uint64_t BloomAnnotator::serialize(const std::string &filename) const {
     std::ofstream out(filename);
-    serialize(out);
-    out.close();
+    return serialize(out);
 }
 
 void BloomAnnotator::load(std::istream &in) {

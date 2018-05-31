@@ -65,8 +65,8 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     std::vector<uint64_t> annotation_from_kmer(const std::string &kmer, bool permute = false) const;
     std::vector<uint64_t> annotate_edge(DeBruijnGraphWrapper::edge_index i) const;
 
-    void serialize(std::ostream &out) const;
-    void serialize(const std::string &filename) const;
+    uint64_t serialize(std::ostream &out) const;
+    uint64_t serialize(const std::string &filename) const;
 
     void load(std::istream &in);
     void load(const std::string &filename);
@@ -76,8 +76,8 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     template <class Iterator>
     void make_columns_prefix(const Iterator &begin, const Iterator &end) { prefix_indices_.insert(begin, end); }
 
-    void export_rows(std::ostream &out, bool permute = true) const;
-    void export_rows(const std::string &filename, bool permute = true) const;
+    uint64_t export_rows(std::ostream &out, bool permute = true) const;
+    uint64_t export_rows(const std::string &filename, bool permute = true) const;
 
     ExactHashAnnotation::kmer_storage_t::const_iterator begin() const { return annotation_exact.kmer_map_.begin(); }
     ExactHashAnnotation::kmer_storage_t::const_iterator end() const { return annotation_exact.kmer_map_.end(); }
@@ -130,12 +130,10 @@ class BloomAnnotator {
                      size_t num = 0,
                      bool check_both_directions = false) const;
 
-    void serialize(std::ostream &out) const;
-
-    void serialize(const std::string &filename) const;
+    uint64_t serialize(std::ostream &out) const;
+    uint64_t serialize(const std::string &filename) const;
 
     void load(std::istream &in);
-
     void load(const std::string &filename);
 
     static std::vector<size_t> unpack(const std::vector<uint64_t> &packed);

@@ -149,7 +149,7 @@ class BloomFilter {
     bool find(const MultiHash &multihash) const;
     bool insert(const MultiHash &multihash);
 
-    void serialize(std::ostream &out) const;
+    uint64_t serialize(std::ostream &out) const;
     void load(std::istream &in);
 
     bool operator==(const BloomFilter &a) const;
@@ -292,13 +292,16 @@ class HashAnnotation {
         return annot;
     }
 
-    void serialize(std::ostream &out) const {
+    uint64_t serialize(std::ostream &out) const {
+        uint64_t written_bytes = 0;
         size_t size = color_bits.size();
         out.write(reinterpret_cast<const char*>(&size), sizeof(size));
+        written_bytes += sizeof(size);
         //out << color_bits.size() << "\n";
         for (auto it = color_bits.begin(); it != color_bits.end(); ++it) {
-            it->serialize(out);
+            written_bytes += it->serialize(out);
         }
+        return written_bytes;
     }
 
     void load(std::istream &in) {
@@ -442,8 +445,8 @@ class ExactHashAnnotation {
                            reinterpret_cast<const char*>(end));
     }
 
-    void serialize(std::ostream &out) const;
-    void serialize(const std::string &filename) const;
+    uint64_t serialize(std::ostream &out) const;
+    uint64_t serialize(const std::string &filename) const;
     void load(std::istream &in);
     void load(const std::string &filename);
 

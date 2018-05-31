@@ -33,19 +33,6 @@ size_t set_bits = 0;
 const char *shuf_seed = std::getenv("SHUF_SEED");
 size_t seed = 0;
 
-void serialize_vector_(std::ostream &out, const std::vector<cpp_int> &nums, size_t n_cols = 0) {
-    n_cols += 64;
-    for (auto it = nums.begin(); it != nums.end(); ++it) {
-        size_t size = annotate::serialize(out, *it) + 8;
-        if (size * 8 < n_cols) {
-            char *zeros = (char*)malloc((n_cols + 7 - (size * 8)) >> 3);
-            memset(zeros, 0, (n_cols + 7 - (size * 8)) >> 3);
-            out.write(zeros, (n_cols + 7 - (size * 8)) >> 3);
-            free(zeros);
-        }
-    }
-}
-
 uint64_t deserializeNumber(std::istream &in) {
     uint64_t n = 0;
     for (size_t i = 0; i < sizeof(n); ++i) {

@@ -46,18 +46,18 @@ class WaveletTrieAnnotator {
         return ret_vect;
     }
 
-    void serialize(std::ostream &out) const {
-        wt_->serialize(out);
-        serialization::serializeNumber(out, num_columns_);
+    uint64_t serialize(std::ostream &out) const {
+        return wt_->serialize(out)
+             + serialization::serializeNumber(out, num_columns_);
     }
     void load(std::istream &in) {
         wt_->load(in);
         num_columns_ = serialization::loadNumber(in);
     }
 
-    void serialize(const std::string &filename) const {
+    uint64_t serialize(const std::string &filename) const {
         std::ofstream out(filename);
-        serialize(out);
+        return serialize(out);
     }
 
     void load(const std::string &filename) {

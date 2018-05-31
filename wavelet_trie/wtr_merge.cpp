@@ -118,8 +118,7 @@ int main(int argc, char** argv) {
         std::cout << "Total bits:\t" << total_bits << std::endl;
         std::cout << "Set bits:\t" << set_bits << std::endl;
         std::cout << "Wavelet trie:" << std::endl;
-        std::cout << "Num leaves:\t" << stats << std::endl;
-        std::cout << "Num bytes:\t" << fout.tellp() << std::endl;
+        std::cout << "Num bytes:\t" << stats << std::endl;
         std::cout << "Bits/edge:\t" << (double)fout.tellp() * 8.0 / (double)wtr->size() << std::endl;
         fout.close();
         delete wtr;

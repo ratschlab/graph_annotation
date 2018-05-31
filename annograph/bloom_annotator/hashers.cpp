@@ -191,9 +191,9 @@ bool BloomFilter::insert(const MultiHash &multihash) {
     */
 }
 
-void BloomFilter::serialize(std::ostream &out) const {
-    serialization::serializeNumber(out, n_bits_);
-    serialization::serializeNumberVector(out, bits);
+uint64_t BloomFilter::serialize(std::ostream &out) const {
+    return serialization::serializeNumber(out, n_bits_)
+         + serialization::serializeNumberVector(out, bits);
 }
 
 void BloomFilter::load(std::istream &in) {
@@ -252,22 +252,23 @@ bool ExactHashAnnotation::operator!=(const ExactHashAnnotation &that) const {
     return !(*this == that);
 }
 
-void ExactHashAnnotation::serialize(std::ostream &out) const {
-    serialization::serializeNumber(out, kmer_map_.size());
+uint64_t ExactHashAnnotation::serialize(std::ostream &out) const {
+    uint64_t written_bytes = 0;
+    written_bytes += serialization::serializeNumber(out, kmer_map_.size());
     for (auto &it : kmer_map_) {
-        serialization::serializeNumber(out, it.second.size());
+        written_bytes += serialization::serializeNumber(out, it.second.size());
         for (auto &i : it.second) {
-            serialization::serializeNumber(out, i);
+            written_bytes += serialization::serializeNumber(out, i);
         }
-        serialization::serializeString(out, it.first);
+        written_bytes += serialization::serializeString(out, it.first);
     }
-    serialization::serializeNumber(out, num_columns_);
+    written_bytes += serialization::serializeNumber(out, num_columns_);
+    return written_bytes;
 }
 
-void ExactHashAnnotation::serialize(const std::string &filename) const {
+uint64_t ExactHashAnnotation::serialize(const std::string &filename) const {
     std::ofstream fout(filename);
-    serialize(fout);
-    fout.close();
+    return serialize(fout);
 }
 
 void ExactHashAnnotation::load(std::istream &in) {

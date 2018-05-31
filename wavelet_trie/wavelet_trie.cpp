@@ -185,6 +185,7 @@ namespace annotate {
         void *l_int_raw = mpz_export(NULL, &a, 1, 1, 0, 0, l_int.backend().data());
         out.write((char*)&a, sizeof(a));
         out.write((char*)l_int_raw, a);
+        //TODO move this to a unit test
 #ifndef NDEBUG
         cpp_int test = 0;
         mpz_import(test.backend().data(), a, 1, 1, 0, 0, l_int_raw);
@@ -347,30 +348,28 @@ namespace annotate {
     }
 
     size_t WaveletTrie::Node::serialize(std::ostream &out) const {
-        //serialize alpha
-        ::annotate::serialize(out, alpha_);
-
-        //beta
-        rrr_t(beta_).serialize(out);
+        size_t written_bytes = ::annotate::serialize(out, alpha_)
+                             + rrr_t(beta_).serialize(out);
 
         //const char *inds = "\0\1\2\3";
-        size_t ret_val = !(bool)child_[0] && !(bool)child_[1];
+        //size_t ret_val = !(bool)child_[0] && !(bool)child_[1];
         char val = (bool)child_[0] | ((uint8_t)((bool)child_[1]) << 1);
         //std::cout << (size_t)val << "\n";
         out.write(&val, 1);
+        written_bytes++;
         if (val == 1) {
             std::cerr << "ERROR: weird case\n";
             exit(1);
         }
         if (child_[0]) {
             assert(val & 1);
-            ret_val += child_[0]->serialize(out);
+            written_bytes += child_[0]->serialize(out);
         }
         if (child_[1]) {
             assert(val & 2);
-            ret_val += child_[1]->serialize(out);
+            written_bytes += child_[1]->serialize(out);
         }
-        return ret_val;
+        return written_bytes;
     }
 
     void WaveletTrie::Node::print(std::ostream &out) const {

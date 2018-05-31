@@ -4,16 +4,18 @@
 const std::string kAlphabet = "ACGTN$";
 
 
-void DBGHash::serialize(const std::string &filename) const {
-    std::ofstream out(filename);
-    serialization::serializeNumber(out, kmers_.size());
-    serialization::serializeNumber(out, k_);
-    serialization::serializeStringMap(out, indices_);
-    out.close();
+uint64_t DBGHash::serialize(std::ostream &out) const {
+    return serialization::serializeNumber(out, kmers_.size())
+         + serialization::serializeNumber(out, k_)
+         + serialization::serializeStringMap(out, indices_);
 }
 
-void DBGHash::load(const std::string &filename) {
-    std::ifstream in(filename);
+uint64_t DBGHash::serialize(const std::string &filename) const {
+    std::ofstream out(filename);
+    return serialize(out);
+}
+
+void DBGHash::load(std::istream &in) {
     size_t size = serialization::loadNumber(in);
     k_ = serialization::loadNumber(in);
     kmers_.resize(size);
@@ -21,7 +23,11 @@ void DBGHash::load(const std::string &filename) {
     //kmers_.resize(indices_.size());
     for (auto &kmer : indices_)
         kmers_[kmer.second] = &kmer.first;
-    in.close();
+}
+
+void DBGHash::load(const std::string &filename) {
+    std::ifstream in(filename);
+    load(in);
 }
 
 std::string DBGHash::encode_sequence(const std::string &sequence) const {
