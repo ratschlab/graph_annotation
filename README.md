@@ -20,7 +20,7 @@ Build types: `cmake .. <arguments>` where arguments are:
 - `-DBUILD_STATIC=ON` -- link statically (OFF by default)
 
 ### Typical workflow
-1. Generate graph and uncompressed annotations (`.precise.dbg` and optionally `.wtr.dbg` files)
+1. Generate graph and uncompressed annotations (`.precise.dbg` and optionally `.wtr.dbg` files)  
 `./annograph build -o <OUTPREFIX> <FLAGS> <INPUTS>`
 2. Compress annotation with Bloom filters  
 `./annograph build -i <OUTPREFIXX> -o <BLOOMOUTPREFIX> <FLAGS> <INPUTS>`
