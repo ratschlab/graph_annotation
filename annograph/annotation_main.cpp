@@ -305,17 +305,20 @@ int main(int argc, const char *argv[]) {
                   << " bytes" << std::endl;
     }
 
+    if (precise_annotator && config->wavelet_trie) {
+        std::cout << "Computing wavelet trie\t" << std::flush;
+        timer.reset();
+        annotate::WaveletTrieAnnotator wt_annotator(*precise_annotator, hashing_graph, config->p);
+        std::cout << wt_annotator.serialize(config->outfbase + ".wtr.dbg")
+                  << " bytes\t"
+                  << timer.elapsed() << " s" << std::endl;
+    }
+
     if (!config->outfbase.empty() && precise_annotator && config->infbase.empty()) {
         std::cout << "Serializing index set\t" << std::flush;
         timer.reset();
         //precise_annotator->export_rows(config->outfbase + ".anno.rawrows.dbg");
         std::cout << precise_annotator->serialize(config->outfbase + ".precise.dbg")
-                  << " bytes\t"
-                  << timer.elapsed() << " s" << std::endl;
-        std::cout << "Computing wavelet trie\t" << std::flush;
-        timer.reset();
-        annotate::WaveletTrieAnnotator wt_annotator(*precise_annotator, hashing_graph, config->p);
-        std::cout << wt_annotator.serialize(config->outfbase + ".wtr.dbg")
                   << " bytes\t"
                   << timer.elapsed() << " s" << std::endl;
     }

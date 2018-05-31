@@ -20,11 +20,12 @@ Build types: `cmake .. <arguments>` where arguments are:
 - `-DBUILD_STATIC=ON` -- link statically (OFF by default)
 
 ### Typical workflow
-1. Generate graph and uncompressed annotations (`.precise.dbg` and `.rawrows.dbg` files)  
+1. Generate graph and uncompressed annotations (`.precise.dbg` and optionally `.wtr.dbg` files)
 `./annograph build -o <OUTPREFIX> <FLAGS> <INPUTS>`
 2. Compress annotation with Bloom filters  
 `./annograph build -i <OUTPREFIXX> -o <BLOOMOUTPREFIX> <FLAGS> <INPUTS>`
-3. Compress annotation with wavelet tries (see [wavelet_trie](./wavelet_trie))
+3. Compress annotation with wavelet tries (if not done in step 1)
+`./annograph build -i <OUTPREFIXX> -o <WTROUTPREFIX> --wavelet-trie <FLAGS> <INPUTS>`
 
 ## bioRxiv preprint
 This code was used to produce the results in the bioRxiv preprint, _[Dynamic compression schemes for graph coloring](https://www.biorxiv.org/content/early/2018/03/17/239806)_ by Harun Mustafa, Ingo Schilken, Mikhail Karasikov, Carsten Eickhoff, Gunnar Ratsch, and Andre Kahles. 

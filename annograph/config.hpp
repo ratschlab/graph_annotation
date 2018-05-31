@@ -15,6 +15,7 @@ class Config {
     bool fasta_anno = false;
     bool to_adj_list = false;
     bool query = false;
+    bool wavelet_trie = false;
 
     unsigned int k = 3;
     unsigned int distance = 0;
