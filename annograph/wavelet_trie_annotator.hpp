@@ -14,22 +14,20 @@ class WaveletTrieAnnotator {
   public:
     WaveletTrieAnnotator(const hash_annotate::DeBruijnGraphWrapper &graph, size_t p = 1)
         : graph_(graph),
-          wt_(new WaveletTrie(p)),
+          wt_(p),
           num_columns_(0) {}
     
     WaveletTrieAnnotator(const hash_annotate::PreciseHashAnnotator &precise,
                          const hash_annotate::DeBruijnGraphWrapper &graph,
                          size_t p = 1)
         : graph_(graph),
-          num_columns_(precise.num_columns()) {
-        auto annots = extract_raw_annots(precise);
-        wt_ = new WaveletTrie(annots, p);
-    }
+          wt_(extract_raw_annots(precise), p),
+          num_columns_(precise.num_columns()) {}
 
-    ~WaveletTrieAnnotator() { delete wt_; }
+    ~WaveletTrieAnnotator() {}
 
     std::vector<uint64_t> annotate_edge(hash_annotate::DeBruijnGraphWrapper::edge_index i) const {
-        auto vect = wt_->at(i);
+        auto vect = wt_.at(i);
         size_t a = mpz_size(vect.backend().data());
         std::vector<uint64_t> ret_vect((a + 63) >> 3);
         mpz_export(ret_vect.data(), &a, -1, sizeof(uint64_t), 0, 0, vect.backend().data());
@@ -47,11 +45,11 @@ class WaveletTrieAnnotator {
     }
 
     uint64_t serialize(std::ostream &out) const {
-        return wt_->serialize(out)
+        return wt_.serialize(out)
              + serialization::serializeNumber(out, num_columns_);
     }
     void load(std::istream &in) {
-        wt_->load(in);
+        wt_.load(in);
         num_columns_ = serialization::loadNumber(in);
     }
 
@@ -65,11 +63,11 @@ class WaveletTrieAnnotator {
         load(in);
     }
 
-    size_t size() const { return wt_->size(); }
+    size_t size() const { return wt_.size(); }
 
   private:
     const hash_annotate::DeBruijnGraphWrapper &graph_;
-    WaveletTrie *wt_;
+    WaveletTrie wt_;
     size_t num_columns_;
 
     std::vector<cpp_int> extract_raw_annots(const hash_annotate::PreciseHashAnnotator &precise) {
