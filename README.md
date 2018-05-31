@@ -24,7 +24,7 @@ Build types: `cmake .. <arguments>` where arguments are:
 `./annograph build -o <OUTPREFIX> <FLAGS> <INPUTS>`
 2. Compress annotation with Bloom filters  
 `./annograph build -i <OUTPREFIXX> -o <BLOOMOUTPREFIX> <FLAGS> <INPUTS>`
-3. Compress annotation with wavelet tries (if not done in step 1)
+3. Compress annotation with wavelet tries (if not done in step 1)  
 `./annograph build -i <OUTPREFIXX> -o <WTROUTPREFIX> --wavelet-trie <FLAGS> <INPUTS>`
 
 ## bioRxiv preprint
