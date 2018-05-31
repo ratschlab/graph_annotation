@@ -24,7 +24,6 @@ const std::vector<std::string> annots = {
 
 int main(int argc, const char *argv[]) {
 
-    Timer timer;
 
     // parse command line arguments and options
     std::unique_ptr<Config> config(new Config(argc, argv));
@@ -102,9 +101,13 @@ int main(int argc, const char *argv[]) {
     double file_read_time = 0;
     double bloom_const_time = 0;
     std::cout << "Start reading data and extracting k-mers..." << std::endl;
+    Timer timer;
+    timer.reset();
 
     // iterate over input files
     for (unsigned int f = 0; f < files.size(); ++f) {
+        if (!annotator && !precise_annotator)
+            break;
         if (config->verbose) {
             std::cout << std::endl << "Parsing " << files[f] << std::endl;
         }
