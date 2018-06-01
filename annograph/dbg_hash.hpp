@@ -34,6 +34,14 @@ class DBGHash : public hash_annotate::DeBruijnGraphWrapper {
 
     edge_index prev_edge(edge_index i) const;
 
+    edge_index map_kmer(const std::string &kmer) const {
+        assert(kmer.length() == k_ + 1);
+        auto find = indices_.find(kmer);
+        if (find == indices_.end())
+            return 0;
+        return find->second;
+    }
+
     void add_sequence(const std::string &sequence, bool rooted = false);
 
     size_t get_num_edges() const;

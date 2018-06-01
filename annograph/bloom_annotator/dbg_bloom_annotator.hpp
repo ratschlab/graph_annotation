@@ -18,6 +18,9 @@ class DeBruijnGraphWrapper {
 
     virtual edge_index first_edge() const = 0;
     virtual edge_index last_edge() const = 0;
+    virtual edge_index map_kmer(const std::string &kmer) const = 0;
+
+    virtual size_t get_num_edges() const = 0;
 
     // Transform sequence to the same kind as the de bruijn graph stores
     virtual std::string encode_sequence(const std::string &sequence) const {

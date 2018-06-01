@@ -57,81 +57,57 @@ class WaveletTrieAnnotator {
         }
     }
 
-    //TODO rewrite as load_from_precise
-    WaveletTrieAnnotator(std::istream &in,
-                         const hash_annotate::DeBruijnGraphWrapper &graph,
-                         size_t p = 1)
-        : graph_(graph),
-          wt_(p) {
-        hash_annotate::PreciseHashAnnotator precise(graph_);
-        precise.load(in);
-        num_columns_ = precise.num_columns();
-        wt_ = annotate::WaveletTrie(extract_index_set(precise), p);
-        /*
-        if (false && p == 1) {
-            hash_annotate::PreciseHashAnnotator precise(graph);
-            precise.load(in);
-            num_columns_ = precise.num_columns();
-            wt_ = annotate::WaveletTrie(extract_index_set(precise), p);
-        } else {
-            // TODO: this depends too much PreciseHashAnnotator serialization
-            //       is implemented.
-            size_t prefix_size = serialization::loadNumber(in);
-            std::set<uint64_t> prefix_indices;
-            while (prefix_size--) {
-                prefix_indices.insert(serialization::loadNumber(in));
-            }
-
-            num_columns_ = serialization::loadNumber(in);
-
-            auto permut_map = hash_annotate::PreciseHashAnnotator::compute_permutation_map(
-                    num_columns_,
-                    prefix_indices);
-
-            size_t graph_size = serialization::loadNumber(in);
-
-            utils::ThreadPool thread_queue(p);
-            size_t step = (graph_size + p - 1) / p;
-            std::vector<std::future<annotate::WaveletTrie>> wtrs;
-            std::vector<std::vector<size_t>> indices;
-            indices.reserve(step);
-
-            while (graph_size--) {
-                indices.emplace_back();
-                std::set<size_t> nums;
-                size_t num_size = serialization::loadNumber(in);
-                while (num_size--) {
-                    indices.back().emplace_back(prefix_indices.size()
-                            ? permut_map[serialization::loadNumber(in)]
-                            : serialization::loadNumber(in));
-                }
-
-                //TODO: optional?
-                std::sort(indices.back().begin(), indices.back().end());
-
-                auto dummy = serialization::loadString(in);
-                if (indices.size() == step) {
-                    wtrs.emplace_back(
-                        thread_queue.enqueue([](std::vector<std::vector<size_t>> indices) {
-                            return annotate::WaveletTrie(std::move(indices));
-                        }, indices)
-                    );
-                    indices.clear();
-                }
-            }
-            if (indices.size()) {
-                wtrs.emplace_back(
-                    thread_queue.enqueue([](std::vector<std::vector<size_t>> &indices) {
-                        return annotate::WaveletTrie(std::move(indices));
-                    }, indices)
-                );
-            }
-
-            for (auto &wtr : wtrs) {
-                wt_.insert(wtr.get());
-            }
+    void load_from_precise_file(std::istream &in, size_t p = 1) {
+        std::vector<std::set<size_t>> rows(graph_.get_num_edges());
+        size_t prefix_size = serialization::loadNumber(in);
+        std::set<uint64_t> prefix_indices;
+        while (prefix_size--) {
+            prefix_indices.insert(serialization::loadNumber(in));
         }
-        */
+
+        num_columns_ = serialization::loadNumber(in);
+
+        auto permut_map = hash_annotate::PreciseHashAnnotator::compute_permutation_map(
+                num_columns_,
+                prefix_indices);
+
+        size_t precise_size = serialization::loadNumber(in);
+
+        utils::ThreadPool thread_queue(p);
+        size_t step = (precise_size + p - 1) / p;
+        std::vector<std::future<annotate::WaveletTrie>> wtrs;
+
+        while (precise_size--) {
+            //load row
+            size_t num_size = serialization::loadNumber(in);
+            std::vector<size_t> indices(num_size);
+            for (auto &i : indices) {
+                i = prefix_indices.size()
+                    ? permut_map[serialization::loadNumber(in)]
+                    : serialization::loadNumber(in);
+            }
+            auto kmer = serialization::loadString(in);
+            auto edge_index = graph_.map_kmer(kmer);
+            assert(edge_index < rows.size());
+            rows[edge_index].insert(indices.begin(), indices.end());
+        }
+        auto it = rows.begin();
+        for (; it + step <= rows.end(); it += step) {
+            wtrs.emplace_back(
+                thread_queue.enqueue([=]() {
+                    return annotate::WaveletTrie(it, it + step);
+                }));
+        }
+        if (it != rows.end()) {
+            wtrs.emplace_back(
+                thread_queue.enqueue([=, &rows]() {
+                    return annotate::WaveletTrie(it, rows.end());
+                }));
+        }
+
+        for (auto &wtr : wtrs) {
+            wt_.insert(wtr.get());
+        }
     }
 
     ~WaveletTrieAnnotator() {}

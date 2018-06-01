@@ -357,7 +357,8 @@ TEST(Annotate, WaveletTrie) {
 
             //std::cout << "Construct from file" << std::endl;
             in.open(test_dump_basename + "_precise");
-            annotate::WaveletTrieAnnotator wtr_file2(in, graph, p);
+            annotate::WaveletTrieAnnotator wtr_file2(graph, p);
+            wtr_file2.load_from_precise_file(in, p);
             EXPECT_EQ(graph.get_num_edges(), wtr_file2.size());
             for (size_t i = 0; i < wtr_file2.size(); ++i) {
                 ASSERT_TRUE(hash_annotate::equal(

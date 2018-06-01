@@ -325,7 +325,8 @@ int main(int argc, const char *argv[]) {
                           << std::endl;
                 exit(1);
             }
-            wt_annotator = new annotate::WaveletTrieAnnotator(in, hashing_graph, config->p);
+            wt_annotator = new annotate::WaveletTrieAnnotator(hashing_graph, config->p);
+            wt_annotator->load_from_precise_file(in, config->p);
         }
         std::cout << wt_annotator->serialize(config->outfbase + ".wtr.dbg")
                   << " bytes\t"
