@@ -88,8 +88,10 @@ class WaveletTrieAnnotator {
             }
             auto kmer = serialization::loadString(in);
             auto edge_index = graph_.map_kmer(kmer);
-            assert(edge_index < rows.size());
-            rows[edge_index].insert(indices.begin(), indices.end());
+            if (edge_index >= graph_.first_edge()
+                    && edge_index <= graph_.last_edge()) {
+                rows[edge_index].insert(indices.begin(), indices.end());
+            }
         }
         auto it = rows.begin();
         for (; it + step <= rows.end(); it += step) {
