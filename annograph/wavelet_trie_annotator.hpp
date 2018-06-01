@@ -132,6 +132,22 @@ class WaveletTrieAnnotator {
         return ret_vect;
     }
 
+    std::vector<uint64_t> annotation_from_kmer(const std::string &kmer, bool permute = false) const {
+        //TODO use this eventually when columns are permuted in the encoding
+        std::ignore = permute;
+        if (kmer.length() != graph_.get_k() + 1) {
+            std::cerr << "Error: incorrect kmer length, " << kmer.length() - 1
+                      << " instead of " << graph_.get_k() << "\n";
+            return std::vector<uint64_t>((num_columns_ + 63) >> 6);
+        }
+        auto edge_index = graph_.map_kmer(kmer);
+        if (edge_index >= graph_.first_edge()
+                && edge_index <= graph_.last_edge()) {
+            return annotate_edge(edge_index);
+        }
+        return std::vector<uint64_t>((num_columns_ + 63) >> 6);
+    }
+
     uint64_t serialize(std::ostream &out) const {
         //return serialization::serializeNumber(out, num_columns_)
         //     + wt_.serialize(out);

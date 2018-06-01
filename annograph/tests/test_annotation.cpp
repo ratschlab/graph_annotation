@@ -314,7 +314,11 @@ TEST(Annotate, WaveletTrie) {
             for (size_t i = 0; i < wtr.size(); ++i) {
                 ASSERT_TRUE(hash_annotate::equal(
                             precise.annotate_edge(i),
-                            wtr.annotate_edge(i)));
+                            wtr.annotate_edge(i))) << p << "\t" << i;
+                auto kmer = graph.get_node_kmer(i) + graph.get_edge_label(i);
+                ASSERT_TRUE(hash_annotate::equal(
+                            precise.annotation_from_kmer(kmer),
+                            wtr.annotation_from_kmer(kmer))) << p << "\t" << i;
             }
             wtrs.push_back(wtr);
             //std::cout << "Serializing" << std::endl;
