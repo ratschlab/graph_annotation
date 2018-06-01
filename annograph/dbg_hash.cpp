@@ -15,19 +15,28 @@ uint64_t DBGHash::serialize(const std::string &filename) const {
     return serialize(out);
 }
 
-void DBGHash::load(std::istream &in) {
-    size_t size = serialization::loadNumber(in);
-    k_ = serialization::loadNumber(in);
-    kmers_.resize(size);
-    indices_ = std::move(serialization::loadStringMap(in));
-    //kmers_.resize(indices_.size());
-    for (auto &kmer : indices_)
-        kmers_[kmer.second] = &kmer.first;
+bool DBGHash::load(std::istream &in) {
+    if (!in.good())
+        return false;
+
+    try {
+        size_t size = serialization::loadNumber(in);
+        k_ = serialization::loadNumber(in);
+        kmers_.resize(size);
+        indices_ = std::move(serialization::loadStringMap(in));
+        //kmers_.resize(indices_.size());
+        for (auto &kmer : indices_) {
+            kmers_[kmer.second] = &kmer.first;
+        }
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
-void DBGHash::load(const std::string &filename) {
+bool DBGHash::load(const std::string &filename) {
     std::ifstream in(filename);
-    load(in);
+    return load(in);
 }
 
 std::string DBGHash::encode_sequence(const std::string &sequence) const {

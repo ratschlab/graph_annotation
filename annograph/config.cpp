@@ -14,6 +14,8 @@ Config::Config(int argc, const char *argv[]) {
     // parse identity from first command line argument
     if (!strcmp(argv[1], "build")) {
         identity = BUILD;
+    } else if (!strcmp(argv[1], "map")) {
+        identity = MAP;
     }
     // provide help screen for chosen identity
     if (argc == 2) {
@@ -25,8 +27,6 @@ Config::Config(int argc, const char *argv[]) {
     for (int i = 2; i < argc; ++i) {
         if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--verbose")) {
             verbose = true;
-        } else if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet")) {
-            quiet = true;
         } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--reverse")) {
             reverse = true;
         } else if (!strcmp(argv[i], "--fasta-anno")) {
@@ -53,8 +53,6 @@ Config::Config(int argc, const char *argv[]) {
             refpath = std::string(argv[++i]);
         } else if (!strcmp(argv[i], "--fasta-header-delimiter")) {
             fasta_header_delimiter = std::string(argv[++i]);
-        } else if (!strcmp(argv[i], "--sql-base")) {
-            sqlfbase = std::string(argv[++i]);
         } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--infile-base")) {
             infbase = std::string(argv[++i]);
         } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
@@ -81,6 +79,9 @@ Config::Config(int argc, const char *argv[]) {
 
     bool print_usage_and_exit = false;
 
+    if (identity == MAP && !fname.size())
+        print_usage_and_exit = true;
+
     if (!fname.size() && infbase.empty())
         print_usage_and_exit = true;
 
@@ -103,6 +104,8 @@ void Config::print_usage(const std::string &prog_name, IdentityType identity) {
             fprintf(stderr, "\tbuild\t\tconstruct a graph object from input sequence\n");
             fprintf(stderr, "\t\t\tfiles in fast[a|q] formats or integrate sequence\n");
             fprintf(stderr, "\t\t\tfiles in fast[a|q] formats into a given graph\n\n");
+
+            fprintf(stderr, "\tmap\t\tannotate a k-mer\n\n");
             return;
         }
         case BUILD: {
@@ -112,7 +115,6 @@ void Config::print_usage(const std::string &prog_name, IdentityType identity) {
             fprintf(stderr, "\t   --reference [STR] \t\tbasename of reference sequence []\n");
             fprintf(stderr, "\t   --fasta-header-delimiter [STR] \t\theader delimiter (for setting multiple annotations) []\n");
             fprintf(stderr, "\t-o --outfile-base [STR]\t\tbasename of output file []\n");
-            fprintf(stderr, "\t   --mem-cap-gb [INT] \t\tmaximum memory available, in Gb [inf]\n");
             fprintf(stderr, "\t-k --kmer-length [INT] \t\tlength of the k-mer to use [3]\n");
             fprintf(stderr, "\t-p --parallel [INT] \t\tnumber of threads to use for wavelet trie compression [1]\n");
             fprintf(stderr, "\t   --wavelet-trie \t\t\tconstruct wavelet trie [off]\n");
@@ -122,11 +124,19 @@ void Config::print_usage(const std::string &prog_name, IdentityType identity) {
             fprintf(stderr, "\t   --bloom-test-num-kmers \tEstimate false positive rate for every n k-mers [0]\n");
             fprintf(stderr, "\t-r --reverse \t\t\tadd reverse complement reads [off]\n");
         } break;
+        case MAP: {
+            fprintf(stderr, "Usage: %s map [options] -i <graph_basename> k-mer [[k-mer] ...]\n\n", prog_name.c_str());
+
+            fprintf(stderr, "Available options for map:\n");
+            fprintf(stderr, "\t   --wavelet-trie \tuse wavelet trie for annotation [off]\n"
+                            "\t                  \t                         default: Bloom filter\n");
+            fprintf(stderr, "\t-i --infile-base [STR] \tinput colored graph basename\n");
+            // fprintf(stderr, "\t-p --parallel [INT] \tnumber of threads to use for wavelet trie compression [1]\n");
+        } break;
     }
 
     fprintf(stderr, "\n\tGeneral options:\n");
     fprintf(stderr, "\t-v --verbose \t\tswitch on verbose output [off]\n");
-    fprintf(stderr, "\t-q --quiet \t\tproduce as little log output as posible [off]\n");
     fprintf(stderr, "\t-h --help \t\tprint usage info\n");
     fprintf(stderr, "\n");
 }

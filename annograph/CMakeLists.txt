@@ -42,7 +42,7 @@ list(FILTER src_files EXCLUDE REGEX ".*\\._.*")
 list(FILTER src_files EXCLUDE REGEX ".*main.cpp")
 
 add_library(annographlibs STATIC ${src_files})
-add_executable(annograph "annotation_main.cpp")
+add_executable(annograph "main.cpp")
 
 set(METALIBS
   -lhts -lz -lbz2

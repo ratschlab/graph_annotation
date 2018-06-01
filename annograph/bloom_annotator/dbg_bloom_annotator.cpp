@@ -67,9 +67,11 @@ uint64_t PreciseHashAnnotator::serialize(const std::string &filename) const {
 
 void PreciseHashAnnotator::load(std::istream &in) {
     size_t num_prefix_cols = serialization::loadNumber(in);
+
     prefix_indices_.clear();
-    while (num_prefix_cols--)
+    while (num_prefix_cols--) {
         prefix_indices_.insert(serialization::loadNumber(in));
+    }
 
     annotation_exact.load(in);
 }
@@ -427,14 +429,21 @@ uint64_t BloomAnnotator::serialize(const std::string &filename) const {
     return serialize(out);
 }
 
-void BloomAnnotator::load(std::istream &in) {
-    annotation.load(in);
+bool BloomAnnotator::load(std::istream &in) {
+    try {
+        annotation.load(in);
+    } catch (...) {
+        return false;
+    }
+    return true;
 }
 
-void BloomAnnotator::load(const std::string &filename) {
+bool BloomAnnotator::load(const std::string &filename) {
     std::ifstream in(filename);
-    load(in);
+    if (!in.good() || !load(in))
+        return false;
     in.close();
+    return true;
 }
 
 std::vector<size_t>
@@ -449,6 +458,8 @@ BloomAnnotator::unpack(const std::vector<uint64_t> &packed) {
 
 std::string
 BloomAnnotator::kmer_from_index(DeBruijnGraphWrapper::edge_index index) const {
+    assert(index <= graph_.last_edge());
+    assert(index >= graph_.first_edge());
     return graph_.get_node_kmer(index) + graph_.get_edge_label(index);
 }
 

@@ -35,10 +35,14 @@ class DBGHash : public hash_annotate::DeBruijnGraphWrapper {
     edge_index prev_edge(edge_index i) const;
 
     edge_index map_kmer(const std::string &kmer) const {
-        assert(kmer.length() == k_ + 1);
+        if (kmer.length() != k_ + 1) {
+            throw std::runtime_error("Incompatible k-mer size");
+        }
+
         auto find = indices_.find(kmer);
         if (find == indices_.end())
-            return 0;
+            return -1;
+
         return find->second;
     }
 
@@ -49,8 +53,8 @@ class DBGHash : public hash_annotate::DeBruijnGraphWrapper {
     uint64_t serialize(std::ostream &out) const;
     uint64_t serialize(const std::string &filename) const;
 
-    void load(std::istream &in);
-    void load(const std::string &filename);
+    bool load(std::istream &in);
+    bool load(const std::string &filename);
 
     std::string transform_sequence(const std::string &sequence, bool rooted = false) const;
 

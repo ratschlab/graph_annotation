@@ -27,6 +27,17 @@ Build types: `cmake .. <arguments>` where arguments are:
 3. Compress annotation with wavelet tries (if not done in step 1)  
 `./annograph build -i <OUTPREFIXX> -o <WTROUTPREFIX> --wavelet-trie <FLAGS> <INPUTS>`
 
+#### Example
+```
+./annograph build -k 9 -o tiny_example ../tests/data/test_vcfparse.fa
+
+./annograph build -i tiny_example --bloom-false-pos-prob 0.01 -o tiny_example ../tests/data/test_vcfparse.fa
+./annograph map -i tiny_example TCGCGCGCTA TCGCGCGCTA TCGCGCGCTC TCGCGCGCTN TCGCGCGCTANA TCGCGCGCTC
+
+./annograph build -i tiny_example --wavelet-trie -o tiny_example ../tests/data/test_vcfparse.fa
+./annograph map --wavelet-trie -i tiny_example TCGCGCGCTA TCGCGCGCTA TCGCGCGCTC TCGCGCGCTN TCGCGCGCTANA TCGCGCGCTC
+```
+
 ## bioRxiv preprint
 This code was used to produce the results in our bioRxiv preprint
 > [_Dynamic compression schemes for graph coloring_](https://www.biorxiv.org/content/early/2018/03/17/239806) by Harun Mustafa, Ingo Schilken, Mikhail Karasikov, Carsten Eickhoff, Gunnar Ratsch, and Andre Kahles. 

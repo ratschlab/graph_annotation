@@ -60,7 +60,7 @@ class WaveletTrieAnnotator {
     void load_from_precise_file(std::istream &in, size_t p = 1) {
         std::vector<std::set<size_t>> rows(graph_.get_num_edges());
         size_t prefix_size = serialization::loadNumber(in);
-        std::set<uint64_t> prefix_indices;
+        std::set<size_t> prefix_indices;
         while (prefix_size--) {
             prefix_indices.insert(serialization::loadNumber(in));
         }
@@ -142,15 +142,23 @@ class WaveletTrieAnnotator {
         return serialize(out);
     }
 
-    void load(std::istream &in) {
+    bool load(std::istream &in) {
         //num_columns_ = serialization::loadNumber(in);
         //wt_.load(in);
-        wt_.load(in);
-        num_columns_ = serialization::loadNumber(in);
+        if (!in.good())
+            return false;
+
+        try {
+            wt_.load(in);
+            num_columns_ = serialization::loadNumber(in);
+            return true;
+        } catch (...) {
+            return false;
+        }
     }
-    void load(const std::string &filename) {
+    bool load(const std::string &filename) {
         std::ifstream in(filename);
-        load(in);
+        return load(in);
     }
 
     size_t size() const { return wt_.size(); }
