@@ -60,7 +60,7 @@ namespace annotate {
 
     cpp_int load(std::istream &in);
 
-    cpp_int pack_indices(std::set<size_t> &indices);
+    cpp_int pack_indices(const std::vector<size_t> &indices);
 
     //template <typename Vector>
     //bv_t insert_zeros(const Vector &target, const size_t count = 0, const size_t i = 0);
@@ -123,10 +123,8 @@ namespace annotate {
 
             void set_p(size_t p) { p_ = p; }
 
-        public:
-            class Node;
         private:
-            Node* root;
+            Node* root = NULL;
             size_t p_; // number of threads
         //public:
         //    typedef std::pair<Node*, size_t> iterator;

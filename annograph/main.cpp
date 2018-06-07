@@ -1,7 +1,9 @@
 #include <fstream>
+#include <sstream>
 #include <ctime>
 #include <map>
 #include <memory>
+#include <algorithm>
 
 #include <zlib.h>
 
@@ -51,6 +53,48 @@ void annotate_kmers(const std::vector<std::string> &kmers, const Graph &graph,
         }
         std::cout << "\n";
     }
+}
+
+std::vector<size_t> wavelet_trie_test_permutations(
+        const DBGHash &graph,
+        const hash_annotate::PreciseHashAnnotator &precise,
+        size_t num_perm,
+        size_t p,
+        bool verbose = false) {
+    if (verbose) {
+        std::cout << "Testing permutations: " << precise.num_prefix_columns() << " prefix columns" << std::endl;
+    }
+    std::vector<size_t> sizes;
+    sizes.reserve(num_perm + 1);
+    std::vector<size_t> indices(precise.num_columns());
+    std::ostringstream sout;
+    //original permutation
+    annotate::WaveletTrieAnnotator wtr(
+            precise,
+            graph,
+            p);
+    sizes.push_back(wtr.serialize(sout));
+    std::cout << sizes.back() << std::endl;
+
+    //shuffles
+    while (num_perm--) {
+        sout.str("");
+        sout.clear();
+        std::srand(num_perm);
+        std::iota(indices.begin(), indices.end(), 0);
+        std::random_shuffle(indices.begin(), indices.end());
+        std::map<size_t, size_t> permut_map;
+        for (size_t i = 0; i < indices.size(); ++i)
+            permut_map.emplace(i, indices[i]);
+        annotate::WaveletTrieAnnotator wtr(
+                    precise,
+                    graph,
+                    p,
+                    std::move(permut_map));
+        sizes.push_back(wtr.serialize(sout));
+        std::cout << sizes.back() << "\n";
+    }
+    return sizes;
 }
 
 int main(int argc, const char *argv[]) {
@@ -729,9 +773,37 @@ int main(int argc, const char *argv[]) {
         if (config->verbose) {
             std::cout << "Mapping finished in " << timer.elapsed() << "sec" << std::endl;
         }
+    } else if (config->identity == Config::PERMUTATION) {
+        Timer timer;
+        DBGHash hashing_graph(0);
+        if (!hashing_graph.load(config->infbase + ".graph.dbg")) {
+            std::cerr << "Error: Graph loading failed for "
+                      << config->infbase + ".graph.dbg" << std::endl;
+            exit(1);
+        }
+        if (config->verbose) {
+            std::cout << "Graph loading: " << timer.elapsed() << "sec" << std::endl;
+        }
+        timer.reset();
+
+        precise_annotator.reset(new hash_annotate::PreciseHashAnnotator(hashing_graph));
+        precise_annotator->load(config->infbase + ".precise.dbg");
+        if (config->verbose) {
+            std::cout << "Annotation loading: " << timer.elapsed() << "sec" << std::endl;
+        }
+
+        auto sizes = wavelet_trie_test_permutations(
+                hashing_graph,
+                *precise_annotator,
+                config->num_permutations,
+                config->p,
+                config->verbose);
+        if (config->verbose) {
+            std::cout << "Permutations: " << timer.elapsed() << "sec" << std::endl;
+        }
 
     } else {
-        std::cerr << "Error: Only BUILD and MAP modes are currently supported" << std::endl;
+        std::cerr << "Error: Only BUILD, MAP, and PERMUTATION modes are currently supported" << std::endl;
         exit(1);
     }
     return 0;

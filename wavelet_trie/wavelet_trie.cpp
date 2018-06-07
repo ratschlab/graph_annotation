@@ -30,8 +30,8 @@ namespace annotate {
     }
 
     bool bit_test(const std::vector<size_t> &a, const size_t &col) {
-        //return std::find(a.begin(), a.end(), col) != a.end();
-        return std::binary_search(a.begin(), a.end(), col);
+        return std::find(a.begin(), a.end(), col) != a.end();
+        //return std::binary_search(a.begin(), a.end(), col);
     }
 
     void bit_set(mpz_t &a_d, const size_t &col) {
@@ -51,6 +51,10 @@ namespace annotate {
 
     void bit_set(std::vector<size_t> &a, const size_t &col) {
         assert(col < -1llu);
+        if (!bit_test(a, col)) {
+            a.push_back(col);
+        }
+        /*
         auto front = a.begin();
         auto back = a.end();
         while (std::distance(front, back) > 1) {
@@ -65,6 +69,7 @@ namespace annotate {
         }
         if (std::distance(front, back) <= 1)
             a.insert(back, col);
+        */
     }
     void bit_unset(cpp_int &a, const size_t &col) {
         assert(col < -1llu);
@@ -180,25 +185,23 @@ namespace annotate {
         return *std::min_element(a.begin(), a.end());
     }
 
+    size_t popcount(const cpp_int &a) {
+        return mpz_popcount(a.backend().data());
+    }
+
     size_t serialize(std::ostream &out, const cpp_int &l_int) {
         size_t a;
         void *l_int_raw = mpz_export(NULL, &a, 1, 1, 0, 0, l_int.backend().data());
-        out.write((char*)&a, sizeof(a));
+        out.write(reinterpret_cast<char*>(&a), sizeof(a));
         out.write((char*)l_int_raw, a);
-        //TODO move this to a unit test
-#ifndef NDEBUG
-        cpp_int test = 0;
-        mpz_import(test.backend().data(), a, 1, 1, 0, 0, l_int_raw);
-        assert(test == l_int);
-#endif
         free(l_int_raw);
         return a;
     }
 
     cpp_int load(std::istream &in) {
         cpp_int curint = 0;
-        size_t a;
-        in.read((char*)&a, sizeof(a));
+        size_t a = 0;
+        in.read(reinterpret_cast<char*>(&a), sizeof(a));
         void *l_int_raw = malloc(a);
         in.read((char*)l_int_raw, a);
         mpz_import(curint.backend().data(), a, 1, 1, 0, 0, l_int_raw);
@@ -206,7 +209,7 @@ namespace annotate {
         return curint;
     }
 
-    cpp_int pack_indices(std::set<size_t> &indices) {
+    cpp_int pack_indices(const std::vector<size_t> &indices) {
         cpp_int num = 0;
         for (auto &i : indices) {
             bit_set(num, i);
@@ -276,7 +279,6 @@ namespace annotate {
         bv_t merged;
         merged.resize(target.size() + source.size());
         size_t j = 0;
-        j = 0;
         for (; j + 64 <= i; j += 64) {
             merged.set_int(j, target.get_int(j));
         }
@@ -336,9 +338,11 @@ namespace annotate {
     }
 
     bool WaveletTrie::operator==(const WaveletTrie &other) const {
-        if ((bool)root != (bool)other.root)
+        if (size() != other.size())
             return false;
-        if (!root)
+        if (static_cast<bool>(root) != static_cast<bool>(other.root))
+            return false;
+        if (root == nullptr)
             return true;
         return *root == *other.root;
     }
@@ -541,9 +545,9 @@ namespace annotate {
         alpha_ = 0;
         auto &alph = alpha_.backend().data();
         for (auto it = indices.begin(); it != indices.end(); ++it) {
-            if (*it >= col_end)
-                break;
-            if (*it >= col)
+            //if (*it >= col_end)
+            //    break;
+            if (*it >= col && *it < col_end)
                 bit_set(alph, *it - col);
         }
         bit_set(alph, col_end - col);
@@ -624,10 +628,10 @@ namespace annotate {
     template <class Iterator>
     WaveletTrie::WaveletTrie(Iterator row_begin, Iterator row_end, size_t p)
         : p_(p) {
-        if (row_end > row_begin) {
+        if (std::distance(row_begin, row_end) > 0) {
             Prefix prefix = WaveletTrie::Node::longest_common_prefix(row_begin, row_end, 0);
             if (prefix.allequal) {
-                root = new Node(row_end - row_begin);
+                root = new Node(std::distance(row_begin, row_end));
                 root->set_alpha_(*row_begin, 0);
                 /*
                 root = new Node(alpha, row_end - row_begin);
@@ -671,7 +675,7 @@ namespace annotate {
             const size_t &col, utils::ThreadPool &thread_queue, Prefix prefix) {
         //TODO col already used by Prefi?
         std::ignore = col;
-        if (row_end > row_begin) {
+        if (std::distance(row_begin, row_end)) {
             assert(prefix.col != -1llu);
             assert(!prefix.allequal);
             size_t col_end = prefix.col;
@@ -682,7 +686,7 @@ namespace annotate {
             //set beta and compute common prefices
             bv_t beta;
             //beta_.resize(row_end - row_begin);
-            beta.resize(row_end - row_begin);
+            beta.resize(std::distance(row_begin, row_end));
             Prefix prefices[2];
             Iterator split = row_begin;
             std::vector<typename std::iterator_traits<Iterator>::value_type> right_children;
@@ -711,7 +715,7 @@ namespace annotate {
             //set_beta_(beta);
             beta_ = beta_t(beta);
             support = false;
-            assert(popcount == rank1(size()));
+            //assert(popcount == rank1(size()));
             //distribute to left and right children
             assert(split != row_begin && split != row_end);
             std::move(right_children.begin(), right_children.end(), split);
@@ -720,13 +724,13 @@ namespace annotate {
             //TODO: copied code here
             //handle trivial cases first
             if (prefices[0].col == -1llu) {
-                child_[0] = new Node(split - row_begin);
+                child_[0] = new Node(std::distance(row_begin, split));
                 child_[0]->set_alpha_(*row_begin, col_end + 1);
                 assert(child_[0]->size() == rank0(beta_.size()));
             }
 
             if (prefices[1].col == -1llu) {
-                child_[1] = new Node(row_end - split);
+                child_[1] = new Node(std::distance(split, row_end));
                 child_[1]->set_alpha_(*split, col_end + 1);
                 assert(child_[1]->size() == rank1(beta_.size()));
             }
@@ -860,7 +864,7 @@ namespace annotate {
 
     bool WaveletTrie::Node::check(bool ind) {
         size_t rank = ind ? popcount : size() - popcount;
-        assert(rank1(size()) == popcount);
+        //assert(rank1(size()) == popcount);
         assert(popcount != size());
         if (!popcount) {
             assert(!child_[1]);
@@ -996,12 +1000,8 @@ namespace annotate {
             Node::overlap_prefix_(*curnode, *othnode);
 
             //update insertion point and merge betas
-            size_t il = i == curnode->size()
-                ? curnode->size() - curnode->popcount
-                : curnode->rank0(i);
-            size_t ir = i == curnode->size()
-                ? curnode->popcount
-                : curnode->rank1(i);
+            size_t il = curnode->rank0(i);
+            size_t ir = curnode->rank1(i);
             assert(othnode);
             Node::merge_beta_(*curnode, *othnode, i);
 
@@ -1369,6 +1369,8 @@ namespace annotate {
     */
 
     size_t WaveletTrie::Node::rank0(const size_t i) {
+        if (i == size())
+            return i - popcount;
         if (!support) {
             sdsl::util::init_support(rank1_, &beta_);
             support = true;
@@ -1377,6 +1379,8 @@ namespace annotate {
     }
 
     size_t WaveletTrie::Node::rank1(const size_t i) {
+        if (i == size())
+            return popcount;
         if (!support) {
             sdsl::util::init_support(rank1_, &beta_);
             support = true;
@@ -1388,6 +1392,7 @@ namespace annotate {
     template WaveletTrie::WaveletTrie(std::vector<cpp_int>&&, size_t);
     template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>::iterator&, std::vector<std::set<size_t>>::iterator&, size_t);
     template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>&, size_t);
+    template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>&&, size_t);
     template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>::iterator&, std::vector<std::vector<size_t>>::iterator&, size_t);
     template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>&, size_t);
     template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>&&, size_t);

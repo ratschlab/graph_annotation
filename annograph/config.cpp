@@ -18,6 +18,8 @@ Config::Config(int argc, const char *argv[]) {
         identity = UPDATE;
     } else if (!strcmp(argv[1], "map")) {
         identity = MAP;
+    } else if (!strcmp(argv[1], "permutation")) {
+        identity = PERMUTATION;
     }
     // provide help screen for chosen identity
     if (argc == 2) {
@@ -49,6 +51,8 @@ Config::Config(int argc, const char *argv[]) {
             bloom_num_hash_functions = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "--bloom-test-num-kmers")) {
             bloom_test_num_kmers = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "--num-permutations")) {
+            num_permutations = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--outfile-base")) {
             outfbase = std::string(argv[++i]);
         } else if (!strcmp(argv[i], "--reference")) {
@@ -80,6 +84,9 @@ Config::Config(int argc, const char *argv[]) {
     */
 
     bool print_usage_and_exit = false;
+
+    if (identity == PERMUTATION && infbase.empty())
+        print_usage_and_exit = true;
 
     if (identity == MAP && !fname.size())
         print_usage_and_exit = true;
@@ -159,6 +166,14 @@ void Config::print_usage(const std::string &prog_name, IdentityType identity) {
                             "\t                  \t                         default: Bloom filter\n");
             fprintf(stderr, "\t-i --infile-base [STR] \tinput colored graph basename\n");
             // fprintf(stderr, "\t-p --parallel [INT] \tnumber of threads to use for wavelet trie compression [1]\n");
+        } break;
+        case PERMUTATION: {
+            fprintf(stderr, "Usage: %s permutation [options] -i <graph_basename>\n\n", prog_name.c_str());
+
+            fprintf(stderr, "Available options for permutation:\n");
+            fprintf(stderr, "\t   --num-permutations \t\tnumber of column index permutations to test [0]\n");
+            fprintf(stderr, "\t-p --parallel [INT] \t\tnumber of threads to use for wavelet trie compression [1]\n");
+            fprintf(stderr, "\t-i --infile-base [STR] \tinput colored graph basename\n");
         } break;
     }
 
