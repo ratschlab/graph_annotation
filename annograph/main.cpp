@@ -352,7 +352,8 @@ int main(int argc, const char *argv[]) {
             }
             std::cout << wt_annotator->serialize(config->outfbase + ".wtr.dbg")
                       << " bytes\t"
-                      << timer.elapsed() << " s" << std::endl;
+                      << timer.elapsed() << " s\t"
+                      << config->p << " threads" << std::endl;
         }
 
         if (!config->outfbase.empty() && precise_annotator.get() && config->infbase.empty()) {
