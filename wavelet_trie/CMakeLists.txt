@@ -35,30 +35,30 @@ set(SDSLINCLUDE "external-libraries/sdsl-lite/include")
 #add_subdirectory()
 
 add_library(wtr_libs STATIC "thread_pool.cpp")
-add_executable(wtr_compress "wtr_compress.cpp" "wavelet_trie.cpp")
-add_executable(wtr_merge "wtr_merge.cpp" "wavelet_trie.cpp")
-add_executable(wtr_test_decompression "wtr_test_decompression.cpp" "wavelet_trie.cpp")
+#add_executable(wtr_compress "wtr_compress.cpp" "wavelet_trie.cpp")
+#add_executable(wtr_merge "wtr_merge.cpp" "wavelet_trie.cpp")
+#add_executable(wtr_test_decompression "wtr_test_decompression.cpp" "wavelet_trie.cpp")
 add_executable(pack_sd "pack_sd.cpp")
 add_executable(count_unique "count_unique.cpp")
-add_executable(unpack_commas "unpack_commas.cpp")
+#add_executable(unpack_commas "unpack_commas.cpp")
 
 set(METALIBS
   -lsdsl -lpthread -lgmp -lboost_serialization
 )
 
 #add_library(wavelet_trie STATIC external-libraries/sdsl-lite/lib/libsdsl.a "wtr_compress.cpp" "wavelet_trie.cpp" "thread_pool.cpp" "wtr_merge.cpp" "wtr_test_decompression.cpp")
-target_include_directories(wtr_compress PUBLIC ${SDSLINCLUDE})
-target_include_directories(wtr_merge PUBLIC ${SDSLINCLUDE})
-target_include_directories(wtr_test_decompression PUBLIC ${SDSLINCLUDE})
+#target_include_directories(wtr_compress PUBLIC ${SDSLINCLUDE})
+#target_include_directories(wtr_merge PUBLIC ${SDSLINCLUDE})
+#target_include_directories(wtr_test_decompression PUBLIC ${SDSLINCLUDE})
 target_include_directories(pack_sd PUBLIC ${SDSLINCLUDE})
 target_include_directories(count_unique PUBLIC ${SDSLINCLUDE})
-target_include_directories(unpack_commas PUBLIC ${SDSLINCLUDE})
-target_link_libraries(wtr_compress wtr_libs ${METALIBS})
-target_link_libraries(wtr_merge wtr_libs ${METALIBS})
-target_link_libraries(wtr_test_decompression wtr_libs ${METALIBS})
+#target_include_directories(unpack_commas PUBLIC ${SDSLINCLUDE})
+#target_link_libraries(wtr_compress wtr_libs ${METALIBS})
+#target_link_libraries(wtr_merge wtr_libs ${METALIBS})
+#target_link_libraries(wtr_test_decompression wtr_libs ${METALIBS})
 target_link_libraries(pack_sd ${METALIBS})
 target_link_libraries(count_unique ${METALIBS})
-target_link_libraries(unpack_commas ${METALIBS})
+#target_link_libraries(unpack_commas ${METALIBS})
 
 #-------------------
 # Unit Tests
