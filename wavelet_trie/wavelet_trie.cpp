@@ -309,12 +309,47 @@ namespace annotate {
         }
         assert(merged == merged_test);
         */
-        //TODO: not doing this cases invalid free
-        //submit bugfix?
         return merged;
     }
 
-    WaveletTrie::WaveletTrie(size_t p) : root(nullptr), p_(p) { }
+    template <typename Vector>
+    bv_t remove_range(const Vector &source, const size_t begin, const size_t end) {
+        if (begin > end) {
+            std::cerr << "begin > end\n";
+            exit(1);
+        }
+        if (begin >= source.size()) {
+            std::cerr << "begin >= source.size()\n";
+            exit(1);
+        }
+        if (end > source.size()) {
+            std::cerr << "end > source.size()\n";
+            exit(1);
+        }
+
+        bv_t spliced;
+        spliced.resize(source.size() + begin - end);
+        size_t j = 0;
+
+        //first chunk
+        for (; j + 64 <= begin; j += 64) {
+            spliced.set_int(j, source.get_int(j));
+        }
+        if (begin > j) {
+            spliced.set_int(j, source.get_int(j, begin - j), begin - j);
+            j = begin;
+        }
+        //TODO: align this to limbs
+        size_t i = end;
+        for (; i + 64 <= source.size(); i += 64) {
+            spliced.set_int(j, source.get_int(i));
+            j += 64;
+        }
+        if (i != source.size()) {
+            spliced.set_int(j, source.get_int(i, source.size() - i), source.size() - i);
+        }
+        return spliced;
+    }
 
     size_t WaveletTrie::serialize(std::ostream &out) const {
         if (root)

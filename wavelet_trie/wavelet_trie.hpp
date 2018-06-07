@@ -56,17 +56,22 @@ namespace annotate {
     size_t lsb(const std::set<size_t> &a);
     size_t lsb(const std::vector<size_t> &a);
 
+    size_t popcount(const cpp_int &a);
+
     size_t serialize(std::ostream &out, const cpp_int &l_int);
 
     cpp_int load(std::istream &in);
 
     cpp_int pack_indices(const std::vector<size_t> &indices);
 
-    //template <typename Vector>
-    //bv_t insert_zeros(const Vector &target, const size_t count = 0, const size_t i = 0);
+    template <typename Vector>
+    bv_t insert_zeros(const Vector &target, const size_t count = 0, const size_t i = 0);
 
-    //template <typename Vector>
-    //bv_t insert_range(const Vector &target, const Vector &source, const size_t i = 0);
+    template <typename Vector>
+    bv_t insert_range(const Vector &target, const Vector &source, const size_t i = 0);
+
+    template <typename Vector>
+    bv_t remove_range(const Vector &source, const size_t begin, const size_t end);
 
     class Prefix {
         public:
