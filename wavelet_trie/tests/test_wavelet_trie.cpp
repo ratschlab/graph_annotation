@@ -1,6 +1,9 @@
 #include "gtest/gtest.h"
 #include "wavelet_trie.hpp"
 
+const std::string test_data_dir = "../tests/data";
+const std::string test_dump_basename = test_data_dir + "/dump_test";
+
 
 std::vector<std::vector<std::vector<size_t>>> bits {
     {}, // 0
@@ -459,6 +462,19 @@ void check_wtr_vector(std::vector<annotate::WaveletTrie> &wtrs) {
     }
 }
 
+void dump_wtrs(std::vector<annotate::WaveletTrie> &wtrs) {
+    size_t size = wtrs.size();
+    for (size_t j = 0; j < size; ++j) {
+        std::ofstream out(test_dump_basename + ".wtrdump");
+        wtrs[j].serialize(out);
+        out.close();
+        std::ifstream in(test_dump_basename + ".wtrdump");
+        wtrs.emplace_back();
+        wtrs.back().load(in);
+        in.close();
+    }
+}
+
 std::vector<size_t> num_threads = {1, 4};
 std::vector<size_t> modes = {0, 1, 2, 3};
 
@@ -474,6 +490,7 @@ TEST(WaveletTrie, TestSingle) {
                 wtrs.push_back(test_wtr_copy_step(i, p, m));
             }
         }
+        dump_wtrs(wtrs);
         check_wtr_vector(wtrs);
     }
 }
@@ -491,6 +508,7 @@ TEST(WaveletTrie, TestPairs) {
                     wtrs.push_back(test_wtr_pairs_copy_step(i, j, p, m));
                 }
             }
+            dump_wtrs(wtrs);
             check_wtr_vector(wtrs);
         }
     }

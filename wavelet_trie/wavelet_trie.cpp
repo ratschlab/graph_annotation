@@ -443,7 +443,9 @@ namespace annotate {
         }
         */
         beta_.load(in);
-        popcount = beta_.size() ? rank1(size()) : 0;
+        sdsl::util::init_support(rank1_, &beta_);
+        support = true;
+        popcount = beta_.size() ? rank1_(size()) : 0;
         char val;
         in.read(&val, 1);
         if (val >= '0') {

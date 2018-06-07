@@ -313,11 +313,11 @@ TEST(Annotate, WaveletTrie) {
             EXPECT_EQ(graph.get_num_edges(), wtr.size());
             for (size_t i = 0; i < wtr.size(); ++i) {
                 ASSERT_TRUE(hash_annotate::equal(
-                            precise.annotate_edge(i),
+                            precise.annotate_edge(i, true),
                             wtr.annotate_edge(i))) << p << "\t" << i;
                 auto kmer = graph.get_node_kmer(i) + graph.get_edge_label(i);
                 ASSERT_TRUE(hash_annotate::equal(
-                            precise.annotation_from_kmer(kmer),
+                            precise.annotation_from_kmer(kmer, true),
                             wtr.annotation_from_kmer(kmer))) << p << "\t" << i;
             }
             wtrs.push_back(wtr);
@@ -395,7 +395,7 @@ TEST(Annotate, WaveletTrie) {
 
         //std::cout << "Checking equality" << std::endl;
         for (size_t i = 1; i < wtrs.size(); ++i) {
-            ASSERT_EQ(wtrs[i - 1], wtrs[i]);
+            ASSERT_EQ(wtrs[i - 1], wtrs[i]) << i;
         }
     }
 }
