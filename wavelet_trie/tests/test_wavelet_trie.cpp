@@ -496,4 +496,44 @@ TEST(WaveletTrie, TestPairs) {
     }
 }
 
+TEST(WaveletTrie, TestDelete) {
+    for (size_t _i = 0; _i < bits.size(); ++_i) {
+        auto nums = generate_nums(bits[_i]);
+        for (size_t i = 0; i < nums.size(); ++i) {
+            //std::cout << "test:\t" << std::dec << _i << "\t" << i << "\n";
+            std::vector<annotate::cpp_int> nums_c;
+            nums_c.reserve(nums.size());
+            nums_c.insert(nums_c.end(), nums.begin(), nums.end());
+            ASSERT_EQ(nums_c.size(), nums.size());
 
+            std::vector<annotate::cpp_int> nums_s;
+            nums_s.reserve(nums.size() - 1);
+            nums_s.insert(nums_s.end(), nums.begin(), nums.begin() + i);
+            nums_s.insert(nums_s.end(), nums.begin() + i + 1, nums.end());
+            ASSERT_EQ(nums_s.size(), nums.size() - 1);
+
+            std::vector<annotate::cpp_int> nums_s_c;
+            nums_s_c.reserve(nums_s.size());
+            nums_s_c.insert(nums_s_c.end(), nums_s.begin(), nums_s.end());
+            ASSERT_EQ(nums_s_c.size(), nums_s.size());
+
+            annotate::WaveletTrie wts(std::move(nums_c));
+            check_wtr(wts, nums, std::to_string(_i) + ";");
+            wts.remove(i);
+            ASSERT_EQ(wts.size(), nums.size() - 1);
+            ASSERT_EQ(wts.size(), nums_s_c.size());
+            check_wtr(wts, nums_s_c, std::to_string(_i) + ":" + std::to_string(i));
+
+            annotate::WaveletTrie wts_s(std::move(nums_s));
+            check_wtr(wts_s, nums_s_c, std::to_string(_i) + ":" + std::to_string(i) + ";");
+
+            //check structure
+            std::vector<annotate::WaveletTrie> wtrs = {
+                std::move(wts),
+                std::move(wts_s)
+            };
+
+            check_wtr_vector(wtrs);
+        }
+    }
+}

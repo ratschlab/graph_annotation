@@ -351,6 +351,9 @@ namespace annotate {
         return spliced;
     }
 
+    WaveletTrie::WaveletTrie() : root(nullptr), p_(1) {}
+    WaveletTrie::WaveletTrie(size_t p) : root(nullptr), p_(p) {}
+
     size_t WaveletTrie::serialize(std::ostream &out) const {
         if (root)
             return root->serialize(out);
@@ -627,6 +630,15 @@ namespace annotate {
             bit_set(alpha_, 0);
         }
     }
+
+    //copy
+    WaveletTrie::WaveletTrie(const Node &node, size_t p)
+        : root(new Node(const_cast<const Node&>(node))),
+          p_(p) {}
+
+    WaveletTrie::WaveletTrie(Node *node, size_t p)
+        : root(node),
+          p_(p) {}
 
     // copy constructor
     WaveletTrie::WaveletTrie(const WaveletTrie &other)
@@ -975,6 +987,81 @@ namespace annotate {
                 child_[ind] = new Node(size() - popcount);
             }
         }
+    }
+
+    void WaveletTrie::remove(size_t j) {
+        assert(j < size());
+#ifndef NDEBUG
+        size_t oldsize = size();
+#endif
+        if (size() == 1) {
+            delete root;
+            root = NULL;
+            assert(size() == 0);
+            return;
+        }
+
+        Node *node = root;
+        while (!node->is_leaf()) {
+            bool curbit = node->beta_[j];
+            size_t next_j;
+            size_t curpopcount = node->popcount;
+            if (curbit) {
+                next_j = node->rank1(j);
+                curpopcount--;
+            } else {
+                next_j = node->rank0(j);
+            }
+            if ((curbit && !curpopcount)
+                    || (!curbit && curpopcount == node->beta_.size() - 1)) {
+                //merge nodes
+                bool child = static_cast<bool>(curpopcount);
+                assert(node->child_[!child]->is_leaf());
+                assert(node->child_[!child]->size() == 1);
+                delete node->child_[!child];
+                node->child_[!child] = NULL;
+                size_t curmsb = msb(node->alpha_);
+                //std::cout << std::hex << node->alpha_ << "\t";
+                if (!child) {
+                    bit_unset(node->alpha_, curmsb);
+                }
+                Node *othnode = node->child_[child];
+                assert(othnode);
+                node->child_[child] = NULL;
+                node->alpha_ |= othnode->alpha_ << (curmsb + 1);
+                assert(node->alpha_ != 0);
+                //std::cout << std::hex << node->alpha_ << "\t";
+                assert(othnode->beta_.size() == node->beta_.size() - 1);
+                node->beta_ = std::move(othnode->beta_);
+                //std::cout << node->beta_ << "\n";
+                node->popcount = othnode->popcount;
+                node->rank1_.set_vector(&node->beta_);
+                std::swap(node->child_[0], othnode->child_[0]);
+                std::swap(node->child_[1], othnode->child_[1]);
+                delete othnode;
+                if (node->is_leaf()) {
+                    curmsb = msb(node->alpha_);
+                    bit_unset(node->alpha_, curmsb);
+                    if (node->alpha_ != 0)
+                        bit_set(node->alpha_, msb(node->alpha_) + 1);
+                    else
+                        node->alpha_ = 1;
+                }
+                return;
+            } else {
+                node->beta_ = beta_t(remove_range(node->beta_, j, j + 1));
+                node->support = false;
+                if (curbit)
+                    node->popcount--;
+            }
+            j = next_j;
+            node = curbit ? node->child_[1] : node->child_[0];
+            assert(node);
+        }
+        assert(!node->popcount);
+        node->beta_ = beta_t(bv_t(node->size() - 1));
+        node->support = false;
+        assert(oldsize - 1 == size());
     }
 
     void WaveletTrie::insert(const WaveletTrie &wtr, size_t i) {

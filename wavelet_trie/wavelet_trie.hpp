@@ -84,7 +84,16 @@ namespace annotate {
     class WaveletTrie {
         public:
 
-            WaveletTrie(size_t p = 1);
+            class Node;
+            WaveletTrie();
+            WaveletTrie(size_t p);
+
+        private:
+
+            WaveletTrie(const Node &node, size_t p = 1);
+            WaveletTrie(Node *node, size_t p = 1);
+
+        public:
 
             // copy constructor
             WaveletTrie(const WaveletTrie &other);
@@ -112,6 +121,8 @@ namespace annotate {
 
             void insert(const WaveletTrie &wtr, size_t i = -1llu);
             void insert(WaveletTrie&& wtr, size_t i = -1llu);
+
+            void remove(size_t j);
 
             void print();
 
