@@ -82,6 +82,10 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     void load(std::istream &in);
     void load(const std::string &filename);
 
+    void clear_prefix() { prefix_indices_.clear(); }
+
+    std::set<size_t> get_prefix() const { return prefix_indices_; }
+
     void make_column_prefix(size_t i) { prefix_indices_.insert(i); }
 
     template <class Iterator>
