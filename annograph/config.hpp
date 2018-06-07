@@ -35,6 +35,7 @@ class Config {
     enum IdentityType {
         NO_IDENTITY = -1,
         BUILD,
+        UPDATE,
         MAP,
     };
     IdentityType identity = NO_IDENTITY;

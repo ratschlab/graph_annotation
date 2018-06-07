@@ -29,9 +29,11 @@ bool test_bit(const std::vector<uint64_t> &a, size_t i);
 
 void set_bit(std::vector<uint64_t> &a, size_t i);
 
-bool equal(const std::vector<uint64_t> &a, const std::vector<uint64_t> &b);
+bool equal(const std::vector<uint64_t> &a,
+           const std::vector<uint64_t> &b);
 
 void print(const std::vector<uint64_t> &a);
+
 
 class HashIterator {
   public:

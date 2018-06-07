@@ -14,6 +14,8 @@ Config::Config(int argc, const char *argv[]) {
     // parse identity from first command line argument
     if (!strcmp(argv[1], "build")) {
         identity = BUILD;
+    } else if (!strcmp(argv[1], "update")) {
+        identity = UPDATE;
     } else if (!strcmp(argv[1], "map")) {
         identity = MAP;
     }
@@ -82,8 +84,16 @@ Config::Config(int argc, const char *argv[]) {
     if (identity == MAP && !fname.size())
         print_usage_and_exit = true;
 
+    if (identity == UPDATE && !infbase.size())
+        print_usage_and_exit = true;
+
     if (!fname.size() && infbase.empty())
         print_usage_and_exit = true;
+
+    if (fasta_header_delimiter.size() > 1) {
+        std::cerr << "FASTA header delimiter must be at most one character" << std::endl;
+        print_usage_and_exit = true;
+    }
 
     // if misused, provide help screen for chosen identity and exit
     if (print_usage_and_exit) {
@@ -105,6 +115,10 @@ void Config::print_usage(const std::string &prog_name, IdentityType identity) {
             fprintf(stderr, "\t\t\tfiles in fast[a|q] formats or integrate sequence\n");
             fprintf(stderr, "\t\t\tfiles in fast[a|q] formats into a given graph\n\n");
 
+            fprintf(stderr, "\tupdate\t\textend graph from input sequence\n");
+            fprintf(stderr, "\t\t\tfiles in fast[a|q] formats or integrate sequence\n");
+            fprintf(stderr, "\t\t\tfiles in fast[a|q] formats into a given graph\n\n");
+
             fprintf(stderr, "\tmap\t\tannotate a k-mer\n\n");
             return;
         }
@@ -112,17 +126,30 @@ void Config::print_usage(const std::string &prog_name, IdentityType identity) {
             fprintf(stderr, "Usage: %s build [options] FASTQ1 [[FASTQ2] ...]\n\n", prog_name.c_str());
 
             fprintf(stderr, "Available options for build:\n");
-            fprintf(stderr, "\t   --reference [STR] \t\tbasename of reference sequence []\n");
-            fprintf(stderr, "\t   --fasta-header-delimiter [STR] \t\theader delimiter (for setting multiple annotations) []\n");
-            fprintf(stderr, "\t-o --outfile-base [STR]\t\tbasename of output file []\n");
-            fprintf(stderr, "\t-k --kmer-length [INT] \t\tlength of the k-mer to use [3]\n");
-            fprintf(stderr, "\t-p --parallel [INT] \t\tnumber of threads to use for wavelet trie compression [1]\n");
+            fprintf(stderr, "\t   --reference [STR] \t\t\tbasename of reference sequence []\n");
+            fprintf(stderr, "\t   --fasta-header-delimiter [STR] \theader delimiter (for setting multiple annotations) []\n");
+            fprintf(stderr, "\t-o --outfile-base [STR]\t\t\tbasename of output file []\n");
+            fprintf(stderr, "\t-k --kmer-length [INT] \t\t\tlength of the k-mer to use [3]\n");
+            fprintf(stderr, "\t-p --parallel [INT] \t\t\tnumber of threads to use for wavelet trie compression [1]\n");
             fprintf(stderr, "\t   --wavelet-trie \t\t\tconstruct wavelet trie [off]\n");
             fprintf(stderr, "\t   --bloom-false-pos-prob [FLOAT] \tFalse positive probability in bloom filter [-1]\n");
             fprintf(stderr, "\t   --bloom-bits-per-edge [FLOAT] \tBits per edge used in bloom filter annotator [0.4]\n");
             fprintf(stderr, "\t   --bloom-hash-functions [INT] \tNumber of hash functions used in bloom filter [off]\n");
-            fprintf(stderr, "\t   --bloom-test-num-kmers \tEstimate false positive rate for every n k-mers [0]\n");
-            fprintf(stderr, "\t-r --reverse \t\t\tadd reverse complement reads [off]\n");
+            fprintf(stderr, "\t   --bloom-test-num-kmers \t\tEstimate false positive rate for every n k-mers [0]\n");
+            fprintf(stderr, "\t-r --reverse \t\t\t\tadd reverse complement reads [off]\n");
+        } break;
+        case UPDATE: {
+            fprintf(stderr, "Usage: %s update [options] -i <graph_basename> FASTQ1 [[FASTQ2] ...]\n\n", prog_name.c_str());
+
+            fprintf(stderr, "Available options for update:\n");
+            fprintf(stderr, "\t   --reference [STR] \t\t\tbasename of reference sequence []\n");
+            fprintf(stderr, "\t   --fasta-header-delimiter [STR] \theader delimiter (for setting multiple annotations) []\n");
+            fprintf(stderr, "\t-i --infile-base [STR] \t\t\tinput colored graph basename\n");
+            fprintf(stderr, "\t   --wavelet-trie \t\t\tuse wavelet trie for annotation [off]\n"
+                            "\t                  \t\t\t                         default: Bloom filter\n");
+            fprintf(stderr, "\t-o --outfile-base [STR]\t\t\tbasename of output file []\n");
+            // fprintf(stderr, "\t-p --parallel [INT] \t\t\tnumber of threads to use for wavelet trie compression [1]\n");
+            fprintf(stderr, "\t-r --reverse \t\t\t\tadd reverse complement reads [off]\n");
         } break;
         case MAP: {
             fprintf(stderr, "Usage: %s map [options] -i <graph_basename> k-mer [[k-mer] ...]\n\n", prog_name.c_str());
