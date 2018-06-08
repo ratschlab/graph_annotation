@@ -81,13 +81,17 @@ TEST(SDSL, InsertZeros) {
     }
 }
 
-/*
 TEST(SDSL, InsertRange) {
-    auto l_int = generate_number();
-    size_t a;
-    void *l_int_raw = mpz_export(NULL, &a, -1, -1, 0, 0, l_int.backend().data());
-    annotate::bv_t bv(a << 3);
-    memcpy(reinterpret_cast<char*>(a.data()), (char*)l_int_raw, a);
-
+    constexpr size_t size = 1000;
+    for (size_t i = 0; i < size + 2; ++i) { //insert size
+        for (size_t j = 0; j <= size; ++j) { //insert position
+            annotate::bv_t bv(size, 1);
+            annotate::bv_t bv_s(size + i, 1);
+            for (size_t k = j; k < j + i; ++k) {
+                bv_s[k] = 0;
+            }
+            annotate::bv_t zeros(i);
+            ASSERT_EQ(bv_s, annotate::insert_range(bv, zeros, j)) << j << " " << i;
+        }
+    }
 }
-*/

@@ -70,8 +70,8 @@ namespace annotate {
     template <typename Vector>
     bv_t insert_zeros(const Vector &target, const size_t count = 0, const size_t i = 0);
 
-    template <typename Vector>
-    bv_t insert_range(const Vector &target, const Vector &source, const size_t i = 0);
+    template <typename Vector1, typename Vector2>
+    bv_t insert_range(const Vector1 &target, const Vector2 &source, const size_t i = 0);
 
     template <typename Vector>
     bv_t remove_range(const Vector &source, const size_t begin, const size_t end);
