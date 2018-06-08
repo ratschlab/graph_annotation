@@ -120,6 +120,12 @@ namespace annotate {
 
             cpp_int at(size_t i, size_t j = -1llu) const;
 
+            void set_bit(size_t i, size_t j);
+
+            void toggle_bit(size_t i, size_t j);
+
+            void unset_bit(size_t i, size_t j);
+
             size_t size() const;
 
             void insert(const WaveletTrie &wtr, size_t i = -1llu);
@@ -145,6 +151,8 @@ namespace annotate {
         private:
             Node* root = NULL;
             size_t p_; // number of threads
+
+            Node* traverse_down(Node *node, size_t &i, size_t &j);
         //public:
         //    typedef std::pair<Node*, size_t> iterator;
     };

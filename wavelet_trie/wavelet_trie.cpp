@@ -891,6 +891,38 @@ namespace annotate {
         delete root;
     }
 
+    //TODO: use callbacks to avoid duplicated code
+    WaveletTrie::Node* WaveletTrie::traverse_down(Node *node, size_t &i, size_t &j) {
+        size_t curmsb;
+        while (!node->is_leaf() && (curmsb = msb(node->alpha_) + 1) < j) {
+            j -= curmsb;
+            if (node->beta_[i]) {
+                assert(node->child_[1]);
+                i = node->rank1(i);
+                node = node->child_[1];
+            } else {
+                assert(node->child_[0]);
+                i = node->rank0(i);
+                node = node->child_[0];
+            }
+        }
+        return node;
+    }
+
+    void WaveletTrie::toggle_bit(size_t i, size_t j) {
+        assert(i < size());
+        WaveletTrie wtr_int(traverse_down(root, i, j));
+        auto cur_annot = wtr_int.at(i);
+        if (bit_test(cur_annot, j)) {
+            bit_unset(cur_annot, j);
+        } else {
+            bit_set(cur_annot, j);
+        }
+        wtr_int.insert(WaveletTrie(std::vector<cpp_int>{cur_annot}), i);
+        wtr_int.remove(i + 1);
+        wtr_int.root = NULL;
+    }
+
     cpp_int WaveletTrie::at(size_t i, size_t j) const {
         assert(i < size());
         Node *node = root;
@@ -913,6 +945,38 @@ namespace annotate {
         annot |= node->alpha_ << length;
         bit_unset(annot, msb(annot));
         return annot;
+    }
+
+    void WaveletTrie::set_bit(size_t i, size_t j) {
+        assert(i < size());
+        WaveletTrie wtr_int(traverse_down(root, i, j));
+        auto cur_annot = wtr_int.at(i);
+        if (bit_test(cur_annot, j)) {
+            wtr_int.root = NULL;
+            return;
+        }
+        bit_set(cur_annot, j);
+
+        WaveletTrie wtr_int_ins(std::vector<cpp_int>{cur_annot});
+        wtr_int.insert(std::move(wtr_int_ins), i);
+        wtr_int.remove(i + 1);
+        wtr_int.root = NULL;
+    }
+
+    void WaveletTrie::unset_bit(size_t i, size_t j) {
+        assert(i < size());
+        WaveletTrie wtr_int(traverse_down(root, i, j));
+        auto cur_annot = wtr_int.at(i);
+        if (!bit_test(cur_annot, j)) {
+            wtr_int.root = NULL;
+            return;
+        }
+        bit_unset(cur_annot, j);
+
+        WaveletTrie wtr_int_ins(std::vector<cpp_int>{cur_annot});
+        wtr_int.insert(std::move(wtr_int_ins), i);
+        wtr_int.remove(i + 1);
+        wtr_int.root = NULL;
     }
 
     size_t WaveletTrie::size() const {

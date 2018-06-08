@@ -516,6 +516,71 @@ TEST(WaveletTrie, TestPairs) {
     }
 }
 
+TEST(WaveletTrie, TestSetUnsetToggleBit) {
+    std::vector<annotate::WaveletTrie> wtrs;
+    size_t max_elem = 0;
+    for (auto bit_v : bits) {
+        for (auto n : bit_v) {
+            if (n.size()) {
+                max_elem = std::max(max_elem,
+                        *std::max_element(n.begin(), n.end()));
+            }
+        }
+    }
+    max_elem += 3;
+    for (size_t i = 0; i < bits.size(); ++i) {
+        if (i != 9)
+            continue;
+        auto nums = generate_nums(bits[i]);
+        std::vector<annotate::cpp_int> nums_c;
+        nums_c.reserve(nums.size());
+        nums_c.insert(nums_c.end(), nums.begin(), nums.end());
+        wtrs.emplace_back(std::move(nums_c));
+        for (size_t j = 0; j < nums.size(); ++j) {
+            for (size_t k = 0; k < max_elem; ++k) {
+                wtrs.back().toggle_bit(j, k);
+                annotate::bit_toggle(nums[j], k);
+                check_wtr(wtrs.back(), nums,
+                        "Toggle1:" +
+                        std::to_string(i) + ":" + std::to_string(j) + ":" + std::to_string(k));
+
+                wtrs.back().toggle_bit(j, k);
+                annotate::bit_toggle(nums[j], k);
+                check_wtr(wtrs.back(), nums,
+                        "Toggle2:" +
+                        std::to_string(i) + ":" + std::to_string(j) + ":" + std::to_string(k));
+
+                bool prev = annotate::bit_test(nums[j], k);
+                wtrs.back().set_bit(j, k);
+                annotate::bit_set(nums[j], k);
+                check_wtr(wtrs.back(), nums,
+                        "Set1:" +
+                        std::to_string(i) + ":" + std::to_string(j) + ":" + std::to_string(k));
+                if (!prev) {
+                    annotate::bit_unset(nums[j], k);
+                    wtrs.back().unset_bit(j, k);
+                }
+                check_wtr(wtrs.back(), nums,
+                        "Set2:" +
+                        std::to_string(i) + ":" + std::to_string(j) + ":" + std::to_string(k));
+
+                wtrs.back().unset_bit(j, k);
+                annotate::bit_unset(nums[j], k);
+                check_wtr(wtrs.back(), nums,
+                        "Unset1:" +
+                        std::to_string(i) + ":" + std::to_string(j) + ":" + std::to_string(k));
+                if (prev) {
+                    annotate::bit_set(nums[j], k);
+                    wtrs.back().set_bit(j, k);
+                }
+                check_wtr(wtrs.back(), nums,
+                        "Unset2:" +
+                        std::to_string(i) + ":" + std::to_string(j) + ":" + std::to_string(k));
+            }
+        }
+    }
+}
+
 TEST(WaveletTrie, TestDelete) {
     for (size_t _i = 0; _i < bits.size(); ++_i) {
         auto nums = generate_nums(bits[_i]);
