@@ -71,6 +71,16 @@ TEST(SDSL, RemoveRange) {
     }
 }
 
+TEST(SDSL, InsertZeros) {
+    constexpr size_t size = 1000;
+    for (size_t i = 0; i <= size; ++i) {
+        annotate::bv_t bv(size, 1);
+        annotate::bv_t bv_s(size + 1, 1);
+        bv_s[i] = 0;
+        ASSERT_EQ(bv_s, annotate::insert_zeros(bv, 1, i)) << i;
+    }
+}
+
 /*
 TEST(SDSL, InsertRange) {
     auto l_int = generate_number();
