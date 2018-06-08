@@ -39,6 +39,9 @@ namespace annotate {
     void bit_unset(std::set<size_t> &a, const size_t &col);
     void bit_unset(std::vector<size_t> &a, const size_t &col);
 
+    template <class Container>
+    void bit_toggle(Container &a, const size_t &col);
+
     size_t next_bit(const cpp_int &a, const size_t &col);
     size_t next_bit(const std::set<size_t> &a, const size_t &col);
     size_t next_bit(const std::vector<size_t> &a, const size_t &col);
