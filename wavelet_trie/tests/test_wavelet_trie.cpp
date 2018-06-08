@@ -3,6 +3,8 @@
 
 const std::string test_data_dir = "../tests/data";
 const std::string test_dump_basename = test_data_dir + "/dump_test";
+const std::vector<size_t> num_threads = {1, 4};
+const std::vector<size_t> modes = {0, 1, 2, 3};
 
 
 std::vector<std::vector<std::vector<size_t>>> bits {
@@ -476,9 +478,6 @@ void dump_wtrs(std::vector<annotate::WaveletTrie> &wtrs) {
         in.close();
     }
 }
-
-std::vector<size_t> num_threads = {1, 4};
-std::vector<size_t> modes = {0, 1, 2, 3};
 
 TEST(WaveletTrie, TestSingle) {
     std::vector<annotate::WaveletTrie> wtrs;

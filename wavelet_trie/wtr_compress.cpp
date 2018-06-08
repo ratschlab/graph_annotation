@@ -278,7 +278,7 @@ int main(int argc, char** argv) {
 
         std::cout << "Compressing:\t" << argv[f] << std::endl;
         std::cout << "Step size:\t" << step << std::endl;
-#ifndef NPRINT
+#ifdef PRINT
         auto policy = std::launch::deferred;
 #else
         auto policy = std::launch::async;
@@ -387,7 +387,7 @@ int main(int argc, char** argv) {
     if (test != NULL) {
         std::cout << "Decompressing:\t" << std::flush;
         assert(wtr->size() == nums_ref.size());
-#ifndef NPRINT
+#ifdef PRINT
         wtr->print();
 #endif
         Timer decomp_timer;

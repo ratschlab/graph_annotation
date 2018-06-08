@@ -10,7 +10,7 @@ endif()
 string(APPEND CMAKE_CXX_FLAGS " \
   -std=c++14 -Wall -Wextra -Werror \
   -msse4.2 -mavx -mavx2 -mbmi -mbmi2 \
-  -fopenmp -D_THREAD_SAFE -pthread -DNPRINT") # -DDBGDEBUG
+  -fopenmp -D_THREAD_SAFE -pthread") # -DDBGDEBUG
 
 # Profile build type
 set(CMAKE_CXX_FLAGS_PROFILE "-pg -DNDEBUG -O2 -g")
@@ -36,7 +36,11 @@ add_subdirectory(
   bloom_annotator
 )
 
-file(GLOB src_files "*.cpp" "../wavelet_trie/wavelet_trie.cpp" "../wavelet_trie/thread_pool.cpp")
+add_subdirectory(
+  ../wavelet_trie ${CMAKE_BINARY_DIR}/wavelet_trie
+)
+
+file(GLOB src_files "*.cpp")
 
 list(FILTER src_files EXCLUDE REGEX ".*\\._.*")
 list(FILTER src_files EXCLUDE REGEX ".*main.cpp")
@@ -46,7 +50,8 @@ add_executable(annograph "main.cpp")
 
 set(METALIBS
   -lhts -lz -lbz2
-  -lssl -lcrypto -llzma -lsdsl -lgmp
+  -lssl -lcrypto -llzma
+  -lsdsl -lgmp
 )
 
 if(BUILD_STATIC)
@@ -59,7 +64,7 @@ target_include_directories(
 )
 
 target_link_libraries(
-  annographlibs bloom_annotator ${METALIBS}
+  annographlibs bloom_annotator wtr_libs ${METALIBS}
 )
 
 target_link_libraries(
@@ -96,7 +101,7 @@ add_subdirectory(
   EXCLUDE_FROM_ALL
 )
 
-file(GLOB unit_tests_files "tests/*.cpp")
+file(GLOB unit_tests_files "tests/*.cpp" "../wavelet_trie/tests/*.cpp")
 list(FILTER unit_tests_files EXCLUDE REGEX ".*\\._.*")
 
 if (CMAKE_VERSION VERSION_LESS 2.8.11)

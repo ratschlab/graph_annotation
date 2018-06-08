@@ -21,7 +21,7 @@ struct uint256_t {
     __uint128_t m_high;
 };
 
-std::vector<size_t> num_threads = {1, 4};
+const std::vector<size_t> num_threads = {1, 4};
 
 std::vector<std::string> generate_kmers(size_t num, size_t k = 82) {
     std::vector<std::string> kmers(num);
