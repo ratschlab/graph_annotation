@@ -950,19 +950,49 @@ namespace annotate {
         return true;
     }
 
-    void WaveletTrie::Node::fill_left(bool rightside) {
+    void WaveletTrie::Node::fill_left(size_t i, bool rightside) {
         size_t lrank = size() - popcount;
         assert(lrank == rank0(size()));
         Node *jnode = this;
         if (lrank) {
             while (jnode->child_[0]) {
-                assert(lrank);
+                //assert(lrank);
                 Node *lchild = jnode->child_[0];
+                assert(lrank >= lchild->size());
+                if (lrank == lchild->size())
+                    return;
                 lchild->move_label_down_(lsb(lchild->alpha_));
                 assert(lchild->alpha_ == 1 || ((lchild->alpha_ | 1) == lchild->alpha_ + 1));
-                //lchild->set_beta_(insert_zeros(lchild->beta_, lrank - lchild->size(), rightside ? lchild->size() : 0));
-                lchild->beta_ = beta_t(insert_zeros(lchild->beta_, lrank - lchild->size(), rightside ? lchild->size() : 0));
-                lchild->support = false;
+                if (rightside) {
+#ifndef NPRINT
+                    std::cout << "bar\t" << i << "\n";
+#endif
+                    //i = jnode->rank0(i);
+                    assert(i <= lchild->size());
+#ifndef NPRINT
+                    std::cout << lchild->beta_ << "\n";
+#endif
+                    lchild->beta_ = beta_t(insert_zeros(lchild->beta_,
+                                                    lrank - lchild->beta_.size(),
+                                                    i));
+                    lchild->support = false;
+                    i = lchild->rank0(i);
+#ifndef NPRINT
+                    std::cout << lchild->beta_ << "\n";
+#endif
+                } else {
+#ifndef NPRINT
+                    std::cout << "foo\t" << i << "\n";
+#endif
+                    assert(lrank >= i + lchild->size());
+                    auto bv = insert_zeros(lchild->beta_,
+                            i,
+                            0);
+                    lchild->beta_ = beta_t(insert_zeros(bv,
+                                lrank - i - lchild->size(),
+                                bv.size()));
+                    lchild->support = false;
+                }
                 lrank -= lchild->popcount;
                 jnode = jnode->child_[0];
             }
@@ -970,29 +1000,36 @@ namespace annotate {
             assert(jnode->popcount || (!jnode->popcount && jnode->size() == lrank));
             if (jnode->popcount) {
                 assert(lrank + jnode->popcount == jnode->size());
-                //assert(!jnode->all_zero);
                 jnode->child_[0] = new Node(lrank);
             }
         }
     }
 
-    void WaveletTrie::Node::fill_ancestors(Node&& othnode, bool ind, const size_t i) {
-        // TODO: use i
-        std::ignore = i;
+    void WaveletTrie::Node::fill_ancestors(Node &othnode, bool ind, const size_t i) {
         if (child_[ind]) {
-            if (!ind && othnode.is_leaf() && !othnode.child_[0] && !othnode.child_[1] && (popcount - othnode.popcount)) {
+            if (!ind
+                && othnode.is_leaf()
+                && !othnode.child_[0]
+                && !othnode.child_[1]
+                && (popcount - othnode.popcount)) {
                 assert(popcount);
                 assert(othnode.popcount == 0);
-                //TODO: fix position when i != size()
-                fill_left(true);
+#ifndef NPRINT
+                std::cout << (ind ? "R" : "L") << i << "\n";
+#endif
+                fill_left(i, true);
             }
         } else {
             assert(child_[!ind] || (popcount == othnode.popcount));
             if (othnode.child_[ind]) {
                 std::swap(child_[ind], othnode.child_[ind]);
-                if (!ind && (popcount == othnode.popcount) && !othnode.is_leaf()) {
-                    //TODO: correct position when i != size() ?
-                    fill_left(false);
+                if (!ind
+                    && (popcount == othnode.popcount)
+                    && !othnode.is_leaf()) {
+#ifndef NPRINT
+                    std::cout << (ind ? "R" : "L") << "s" << i << "\n";
+#endif
+                    fill_left(i, false);
                 }
                 assert(popcount);
                 assert(popcount == rank1(size()));
@@ -1024,8 +1061,6 @@ namespace annotate {
             Node::overlap_prefix_(*curnode, *othnode);
 
             //update insertion point and merge betas
-            size_t il = curnode->rank0(i);
-            size_t ir = curnode->rank1(i);
             assert(othnode);
             Node::merge_beta_(*curnode, *othnode, i);
 
@@ -1035,8 +1070,13 @@ namespace annotate {
 #endif
             bool left  = curnode->child_[0] && othnode->child_[0];
             bool right = curnode->child_[1] && othnode->child_[1];
-            curnode->fill_ancestors(std::move(*othnode), 0, il);
-            curnode->fill_ancestors(std::move(*othnode), 1, ir);
+#ifndef NPRINT
+            std::cout << "P" << i << "\n";
+#endif
+            size_t il = curnode->rank0(i);
+            size_t ir = curnode->rank1(i);
+            curnode->fill_ancestors(*othnode, 0, il);
+            curnode->fill_ancestors(*othnode, 1, ir);
             if ((bool)curnode->child_[0] != (bool)curnode->child_[1]) {
                 std::cerr << "ERROR: merging imbalanced error" << std::endl;
                 exit(1);
@@ -1076,6 +1116,43 @@ namespace annotate {
                 othnode = NULL;
             }
         }
+    }
+
+    void WaveletTrie::insert(const WaveletTrie &wtr, size_t i) {
+        if (!wtr.root) {
+            return;
+        }
+        if (!root) {
+            root = new Node(const_cast<const Node&>(*wtr.root));
+            return;
+        }
+        if (i == -1llu) {
+            i = size();
+        }
+        WaveletTrie tmp(wtr);
+        utils::ThreadPool thread_queue(p_);
+        thread_queue.enqueue([=, &thread_queue, &tmp]() {
+            Node::merge_(root, tmp.root, i, thread_queue);
+        });
+        thread_queue.join();
+    }
+
+    void WaveletTrie::insert(WaveletTrie&& wtr, size_t i) {
+        if (!wtr.root) {
+            return;
+        }
+        if (!root) {
+            std::swap(root, wtr.root);
+            return;
+        }
+        if (i == -1llu) {
+            i = size();
+        }
+        utils::ThreadPool thread_queue(p_);
+        thread_queue.enqueue([=, &thread_queue, &wtr]() {
+            Node::merge_(root, wtr.root, i, thread_queue);
+        });
+        thread_queue.join();
     }
 
     template <typename T>

@@ -126,6 +126,13 @@ std::vector<std::vector<std::vector<size_t>>> bits {
         {0, 1, 2, 3, 5},
         {0, 1, 2, 3, 4, 6},
         {1, 2, 3, 4, 4}
+    },
+    {
+        // 22
+        {0}
+    },
+    {   // 23
+        {}
     }
 };
 
@@ -404,8 +411,7 @@ annotate::WaveletTrie test_wtr_pairs_copy_step(size_t i, size_t j, size_t p, int
     return wts;
 }
 
-annotate::WaveletTrie test_wtr_pairs_insert(size_t i, size_t j, size_t p, size_t k, int mode = 0) {
-    std::ignore = mode;
+annotate::WaveletTrie test_wtr_pairs_insert(size_t i, size_t j, size_t p, size_t k) {
     auto nums1 = generate_nums(bits[i]);
     auto nums2 = generate_nums(bits[j]);
     std::vector<annotate::cpp_int> ref;
@@ -423,11 +429,12 @@ annotate::WaveletTrie test_wtr_pairs_insert(size_t i, size_t j, size_t p, size_t
 
     wtrs[0].insert(std::move(wtrs[1]), k);
     check_wtr(wtrs[0], ref, std::to_string(i) + "," + std::to_string(j) + "," + std::to_string(k));
+    annotate::WaveletTrie wtr2(std::move(ref));
+
     return std::move(wtrs[0]);
 }
 
-annotate::WaveletTrie test_wtr_pairs_insert_copy(size_t i, size_t j, size_t p, size_t k, int mode = 0) {
-    std::ignore = mode;
+annotate::WaveletTrie test_wtr_pairs_insert_copy(size_t i, size_t j, size_t p, size_t k) {
     auto nums1 = generate_nums(bits[i]);
     auto nums2 = generate_nums(bits[j]);
     std::vector<annotate::cpp_int> ref;
@@ -453,11 +460,6 @@ void check_wtr_vector(std::vector<annotate::WaveletTrie> &wtrs) {
         for (auto it = wtrs.begin(); it + 1 != wtrs.end(); ++it) {
             EXPECT_TRUE(*it == *(it + 1))
                 << "EQUAL FAIL: " << std::distance(wtrs.begin(), it);
-            if (*it != *(it + 1)) {
-                it->print();
-                (it+1)->print();
-                assert(false);
-            }
         }
     }
 }
@@ -553,5 +555,29 @@ TEST(WaveletTrie, TestDelete) {
 
             check_wtr_vector(wtrs);
         }
+    }
+}
+
+TEST(WaveletTrie, TestPairsInsertDelete) {
+    std::vector<annotate::WaveletTrie> wtrs;
+    for (size_t i = 0; i < bits.size(); ++i) {
+        std::vector<annotate::WaveletTrie> wtrs_ref;
+        wtrs_ref.push_back(test_wtr(i, 1, 0));
+        for (size_t j = 0; j < bits.size(); ++j) {
+            for (size_t k = 0; k <= bits[i].size(); ++k) {
+                wtrs.clear();
+                for (auto p : num_threads) {
+                    wtrs.push_back(test_wtr_pairs_insert(i, j, p, k));
+                    wtrs.push_back(test_wtr_pairs_insert_copy(i, j, p, k));
+                    wtrs_ref.push_back(test_wtr_pairs_insert_copy(i, j, p, k));
+                    for (size_t l = 0; l < bits[j].size(); ++l) {
+                        wtrs_ref.back().remove(k);
+                    }
+                }
+                dump_wtrs(wtrs);
+                check_wtr_vector(wtrs);
+            }
+        }
+        check_wtr_vector(wtrs_ref);
     }
 }

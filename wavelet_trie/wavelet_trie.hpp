@@ -187,7 +187,7 @@ namespace annotate {
 
             size_t size() const { return beta_.size(); }
 
-            void fill_left(bool rightside = false);
+            void fill_left(size_t i, bool rightside);
 
             bool check(bool ind);
 
@@ -233,7 +233,7 @@ namespace annotate {
 
             static void merge_beta_(Node &curnode, const Node &othnode, size_t i = -1llu);
 
-            void fill_ancestors(Node&& othnode, bool ind, const size_t i);
+            void fill_ancestors(Node &othnode, bool ind, const size_t i);
 
             bool is_leaf() const;
 
