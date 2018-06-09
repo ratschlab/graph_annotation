@@ -10,8 +10,8 @@
 
 ### Install
 1. `git clone --recursive https://github.com/ratschlab/graph_annotation`
-2. Build *sdsl-lite* by `pushd wavelet_trie/external-libraries/sdsl-lite; ./install.sh $(pwd); popd`
-3. go to the **build** directory `mkdir -p annograph/build && cd annograph/build`
+2. Build *sdsl-lite* by `pushd external-libraries/sdsl-lite; ./install.sh $(pwd); popd`
+3. go to the **build** directory `mkdir -p build && cd build`
 4. compile by `cmake .. && make && ./unit_tests`
 
 Build types: `cmake .. <arguments>` where arguments are:
