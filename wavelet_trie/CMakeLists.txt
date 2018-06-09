@@ -10,16 +10,15 @@ add_library(wtr_libs STATIC
 )
 
 link_directories(
-  external-libraries/sdsl-lite/lib
+  ../external-libraries/sdsl-lite/lib
 )
 
 include_directories(
-  external-libraries/sdsl-lite/include
 )
 
 target_include_directories(wtr_libs PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
-  external-libraries/sdsl-lite/include
+  ../external-libraries/sdsl-lite/include
 )
 
 target_link_libraries(

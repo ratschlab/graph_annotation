@@ -24,12 +24,12 @@ set(CMAKE_VERBOSE_MAKEFILE 1)
 cmake_policy(SET CMP0015 NEW)
 
 link_directories(
-  ../wavelet_trie/external-libraries/sdsl-lite/lib
+  external-libraries/sdsl-lite/lib
 )
 
 include_directories(
   bloom_annotator
-  ../wavelet_trie
+  wavelet_trie
 )
 
 add_subdirectory(
@@ -37,7 +37,7 @@ add_subdirectory(
 )
 
 add_subdirectory(
-  ../wavelet_trie ${CMAKE_BINARY_DIR}/wavelet_trie
+  wavelet_trie
 )
 
 file(GLOB src_files "*.cpp")
@@ -60,7 +60,7 @@ if(BUILD_STATIC)
 endif()
 
 target_include_directories(
-  annographlibs PUBLIC ../wavelet_trie/external-libraries/sdsl-lite/include
+  annographlibs PUBLIC wavelet_trie/external-libraries/sdsl-lite/include
 )
 
 target_link_libraries(
@@ -101,7 +101,7 @@ add_subdirectory(
   EXCLUDE_FROM_ALL
 )
 
-file(GLOB unit_tests_files "tests/*.cpp" "../wavelet_trie/tests/*.cpp")
+file(GLOB unit_tests_files "tests/*.cpp")
 list(FILTER unit_tests_files EXCLUDE REGEX ".*\\._.*")
 
 if (CMAKE_VERSION VERSION_LESS 2.8.11)

@@ -5,7 +5,7 @@ add_library(bloom_annotator STATIC
 )
 
 include_directories(
-  external-libraries/rollinghashcpp
+  ../external-libraries/rollinghashcpp
 )
 
 target_include_directories(bloom_annotator PUBLIC
