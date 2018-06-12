@@ -64,35 +64,41 @@ std::vector<size_t> wavelet_trie_test_permutations(
     if (verbose) {
         std::cout << "Testing permutations: " << precise.num_prefix_columns() << " prefix columns" << std::endl;
     }
-    std::vector<size_t> sizes;
-    sizes.reserve(num_perm + 1);
-    std::vector<size_t> indices(precise.num_columns());
-    std::ostringstream sout;
+    std::vector<size_t> sizes(num_perm + 1);
+    utils::ThreadPool thread_pool(p);
     //original permutation
-    annotate::WaveletTrieAnnotator wtr(
-            precise,
-            graph,
-            p);
-    sizes.push_back(wtr.serialize(sout));
-    std::cout << sizes.back() << std::endl;
+    thread_pool.enqueue([&]() {
+        std::ostringstream sout;
+        annotate::WaveletTrieAnnotator wtr(
+                precise,
+                graph,
+                1);
+        sizes[0] = wtr.serialize(sout);
+    });
+
+    std::srand(42);
 
     //shuffles
-    while (num_perm--) {
-        sout.str("");
-        sout.clear();
-        std::srand(num_perm);
+    for (size_t _i = 1; _i < sizes.size(); ++_i) {
+        std::vector<size_t> indices(precise.num_columns());
         std::iota(indices.begin(), indices.end(), 0);
         std::random_shuffle(indices.begin(), indices.end());
         std::map<size_t, size_t> permut_map;
         for (size_t i = 0; i < indices.size(); ++i)
             permut_map.emplace(i, indices[i]);
-        annotate::WaveletTrieAnnotator wtr(
-                    precise,
-                    graph,
-                    p,
-                    std::move(permut_map));
-        sizes.push_back(wtr.serialize(sout));
-        std::cout << sizes.back() << "\n";
+        thread_pool.enqueue([&precise,&graph,&sizes](size_t num_perm, std::map<size_t, size_t> permut_map) {
+            std::ostringstream sout;
+            annotate::WaveletTrieAnnotator wtr(
+                        precise,
+                        graph,
+                        1,
+                        std::move(permut_map));
+            sizes[num_perm] = wtr.serialize(sout);
+        }, _i, std::move(permut_map));
+    }
+    thread_pool.join();
+    for (auto &size : sizes) {
+        std::cout << size << std::endl;
     }
     return sizes;
 }

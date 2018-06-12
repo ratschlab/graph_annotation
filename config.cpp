@@ -172,7 +172,7 @@ void Config::print_usage(const std::string &prog_name, IdentityType identity) {
 
             fprintf(stderr, "Available options for permutation:\n");
             fprintf(stderr, "\t   --num-permutations \t\tnumber of column index permutations to test [0]\n");
-            fprintf(stderr, "\t-p --parallel [INT] \t\tnumber of threads to use for wavelet trie compression [1]\n");
+            fprintf(stderr, "\t-p --parallel [INT] \t\tnumber of threads (one permutation per thread) [1]\n");
             fprintf(stderr, "\t-i --infile-base [STR] \tinput colored graph basename\n");
         } break;
     }
