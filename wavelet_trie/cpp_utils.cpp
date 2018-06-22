@@ -14,75 +14,75 @@ bool is_nonzero(const std::vector<size_t> &a) {
     return a.size();
 }
 
-bool bit_test(const cpp_int &a, const size_t &col) {
+bool bit_test(const cpp_int &a, size_t col) {
     assert(col < -1llu);
     return mpz_tstbit(a.backend().data(), col);
 }
 
-bool bit_test(const std::set<size_t> &a, const size_t &col) {
+bool bit_test(const std::set<size_t> &a, size_t col) {
     return a.find(col) != a.end();
 }
 
-bool bit_test(const std::vector<size_t> &a, const size_t &col) {
+bool bit_test(const std::vector<size_t> &a, size_t col) {
     return std::find(a.begin(), a.end(), col) != a.end();
 }
 
-void bit_set(mpz_t &a_d, const size_t &col) {
+void bit_set(mpz_t &a_d, size_t col) {
     assert(col < -1llu);
     mpz_setbit(a_d, col);
 }
 
-void bit_set(cpp_int &a, const size_t &col) {
+void bit_set(cpp_int &a, size_t col) {
     assert(col < -1llu);
     mpz_setbit(a.backend().data(), col);
 }
 
-void bit_set(std::set<size_t> &a, const size_t &col) {
+void bit_set(std::set<size_t> &a, size_t col) {
     assert(col < -1llu);
     a.insert(col);
 }
 
-void bit_set(std::vector<size_t> &a, const size_t &col) {
+void bit_set(std::vector<size_t> &a, size_t col) {
     assert(col < -1llu);
     if (!bit_test(a, col)) {
         a.push_back(col);
     }
 }
-void bit_unset(cpp_int &a, const size_t &col) {
+void bit_unset(cpp_int &a, size_t col) {
     assert(col < -1llu);
     mpz_clrbit(a.backend().data(), col);
 }
 
-void bit_unset(std::set<size_t> &a, const size_t &col) {
+void bit_unset(std::set<size_t> &a, size_t col) {
     auto index = a.find(col);
     if (index != a.end())
         a.erase(index);
 }
 
-void bit_unset(std::vector<size_t> &a, const size_t &col) {
+void bit_unset(std::vector<size_t> &a, size_t col) {
     auto index = std::find(a.begin(), a.end(), col);
     if (index != a.end())
         a.erase(index);
 }
 
 template <class Container>
-void bit_toggle(Container &a, const size_t &col) {
+void bit_toggle(Container &a, size_t col) {
     assert(col < -1llu);
     if (bit_test(a, col))
         bit_unset(a, col);
     else
         bit_set(a, col);
 }
-template void bit_toggle(cpp_int&, const size_t&);
-template void bit_toggle(std::vector<size_t>&, const size_t&);
-template void bit_toggle(std::set<size_t>&, const size_t&);
+template void bit_toggle(cpp_int&, size_t);
+template void bit_toggle(std::vector<size_t>&, size_t);
+template void bit_toggle(std::set<size_t>&, size_t);
 
-size_t next_bit(const cpp_int &a, const size_t &col) {
+size_t next_bit(const cpp_int &a, size_t col) {
     assert(col < -1llu);
     return mpz_scan1(a.backend().data(), col);
 }
 
-size_t next_bit(const std::set<size_t> &a, const size_t &col) {
+size_t next_bit(const std::set<size_t> &a, size_t col) {
     assert(col < -1llu);
     auto lbound = a.lower_bound(col);
     if (lbound == a.end())
@@ -90,7 +90,7 @@ size_t next_bit(const std::set<size_t> &a, const size_t &col) {
     return *lbound;
 }
 
-size_t next_bit(const std::vector<size_t> &a, const size_t &col) {
+size_t next_bit(const std::vector<size_t> &a, size_t col) {
     assert(col < -1llu);
     size_t lbound = -1llu;
     for (auto &index : a) {
@@ -103,7 +103,7 @@ size_t next_bit(const std::vector<size_t> &a, const size_t &col) {
     return lbound;
 }
 
-void clear_after(mpz_t &a_d, const size_t &col) {
+void clear_after(mpz_t &a_d, size_t col) {
     //assert(col < -1llu);
     if (col == -1llu)
         return;
@@ -115,17 +115,17 @@ void clear_after(mpz_t &a_d, const size_t &col) {
     }
 }
 
-void clear_after(cpp_int &a, const size_t &col) {
+void clear_after(cpp_int &a, size_t col) {
     assert(col < -1llu);
     mpz_t& a_d = a.backend().data();
     clear_after(a_d, col);
 }
 
-void clear_after(std::set<size_t> &a, const size_t &col) {
+void clear_after(std::set<size_t> &a, size_t col) {
     a.erase(a.lower_bound(col), a.end());
 }
 
-void clear_after(std::vector<size_t> &a, const size_t &col) {
+void clear_after(std::vector<size_t> &a, size_t col) {
     auto it = a.begin();
     while (it != a.end()) {
         if (*it >= col) {
