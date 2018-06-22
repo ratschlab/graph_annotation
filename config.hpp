@@ -13,6 +13,7 @@ class Config {
     bool reverse = false;
     bool fasta_anno = false;
     bool wavelet_trie = false;
+    bool precise = false;
 
     unsigned int k = 3;
     unsigned int distance = 0;
@@ -38,7 +39,9 @@ class Config {
         BUILD,
         UPDATE,
         MAP,
-        PERMUTATION
+        PERMUTATION,
+        QUERY,
+        STATS
     };
     IdentityType identity = NO_IDENTITY;
 
