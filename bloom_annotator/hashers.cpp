@@ -52,11 +52,11 @@ bool equal(const std::vector<uint64_t> &a,
     return true;
 }
 
-bool test_bit(const std::vector<uint64_t> &a, size_t i) {
+bool test_bit(const std::vector<uint64_t> &a, pos_t i) {
     return a[i >> 6] & (1llu << (i % 64));
 }
 
-void set_bit(std::vector<uint64_t> &a, size_t i) {
+void set_bit(std::vector<uint64_t> &a, pos_t i) {
     a[i >> 6] |= 1llu << (i % 64);
 }
 
@@ -277,7 +277,7 @@ void ExactHashAnnotation::load(std::istream &in) {
     kmer_map_.clear();
     size_t kmer_map_size = serialization::loadNumber(in);
     while (kmer_map_size--) {
-        std::set<size_t> nums;
+        std::set<pos_t> nums;
         size_t num_size = serialization::loadNumber(in);
         while (num_size--) {
             nums.insert(serialization::loadNumber(in));

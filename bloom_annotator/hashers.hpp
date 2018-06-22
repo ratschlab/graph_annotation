@@ -16,6 +16,7 @@ namespace hash_annotate {
 //MERGING
 
 typedef std::vector<uint64_t> MultiHash;
+typedef uint32_t pos_t;
 
 std::vector<uint64_t> merge_or(const std::vector<uint64_t> &a,
                                const std::vector<uint64_t> &b);
@@ -25,9 +26,9 @@ std::vector<uint64_t> merge_and(const std::vector<uint64_t> &a,
 
 uint64_t popcount(const std::vector<uint64_t> &a);
 
-bool test_bit(const std::vector<uint64_t> &a, size_t i);
+bool test_bit(const std::vector<uint64_t> &a, pos_t i);
 
-void set_bit(std::vector<uint64_t> &a, size_t i);
+void set_bit(std::vector<uint64_t> &a, pos_t i);
 
 bool equal(const std::vector<uint64_t> &a,
            const std::vector<uint64_t> &b);
@@ -206,7 +207,7 @@ class HashAnnotation {
     }
 
     template <typename T>
-    std::vector<uint64_t> insert(T *a, T *b, size_t ind) {
+    std::vector<uint64_t> insert(T *a, T *b, pos_t ind) {
         return insert(a, b, &ind, &ind + 1);
     }
 
@@ -226,7 +227,7 @@ class HashAnnotation {
         return annot;
     }
 
-    std::vector<uint64_t> insert(const Hash &hash, size_t ind) {
+    std::vector<uint64_t> insert(const Hash &hash, pos_t ind) {
         return insert(hash, &ind, &ind + 1);
     }
 
@@ -260,7 +261,7 @@ class HashAnnotation {
     }
 
     template <typename T>
-    std::vector<uint64_t> find(T *a, T *b, size_t ind) const {
+    std::vector<uint64_t> find(T *a, T *b, pos_t ind) const {
         return find(a, b, &ind, &ind + 1);
     }
 
@@ -389,7 +390,7 @@ class ExactHashAnnotation {
     }
 
     template <typename T>
-    std::vector<uint64_t> insert(const T *begin, const T *end, size_t i) {
+    std::vector<uint64_t> insert(const T *begin, const T *end, pos_t i) {
         return insert(compute_hash(begin, end), i);
     }
 
@@ -404,19 +405,19 @@ class ExactHashAnnotation {
             }
         } else {
             assert(i >= 0);
-            if (it->second.find(static_cast<size_t>(i)) != it->second.end())
-                set_bit(annot, static_cast<size_t>(i));
+            if (it->second.find(static_cast<pos_t>(i)) != it->second.end())
+                set_bit(annot, static_cast<pos_t>(i));
         }
         return annot;
     }
 
-    std::vector<uint64_t> insert(const std::string &kmer, size_t i) {
-        if (i < static_cast<size_t>(-1)) {
+    std::vector<uint64_t> insert(const std::string &kmer, pos_t i) {
+        if (i < static_cast<pos_t>(-1)) {
             num_columns_ = std::max(num_columns_, i + 1);
         }
         std::vector<uint64_t> annot((num_columns_ + 63) >> 6, 0);
         auto &indices = kmer_map_[kmer];
-        if (i < static_cast<size_t>(-1)) {
+        if (i < static_cast<pos_t>(-1)) {
             indices.insert(i);
         }
         for (auto &index : indices) {
@@ -458,9 +459,9 @@ class ExactHashAnnotation {
     friend class PreciseHashAnnotator;
 
   private:
-    typedef std::unordered_map<std::string, std::set<size_t>> kmer_storage_t;
+    typedef std::unordered_map<std::string, std::set<pos_t>> kmer_storage_t;
     kmer_storage_t kmer_map_;
-    size_t num_columns_;
+    pos_t num_columns_;
 };
 
 

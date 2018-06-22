@@ -4,32 +4,46 @@
 #include <fstream>
 #include <cmath>
 #include <map>
+#include <unordered_map>
 
 
 namespace hash_annotate {
 
-std::map<size_t, size_t> PreciseHashAnnotator::compute_permutation_map() const {
-    std::map<size_t, size_t> index_map;
+std::unordered_map<pos_t, pos_t> PreciseHashAnnotator::compute_permutation_map() const {
+    std::unordered_map<pos_t, pos_t> index_map;
     size_t index_size = 0;
     for (auto i : prefix_indices_) {
         // indices are wrong when setting index_map[i] = index_map.size() instead
         index_map[i] = index_size++;
     }
+    if (index_map.empty())
+        return index_map;
     for (size_t i = 0; i < annotation_exact.size(); ++i) {
         index_size += index_map.emplace(i, index_size).second;
     }
     assert(index_size == num_columns());
+    /*
+    std::vector<pos_t> indices(annotation_exact.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    auto it = indices.begin();
+    for (auto i : prefix_indices_) {
+        std::rotate(it, it + 1, indices.begin() + i + 1);
+        ++it;
+    }
+    */
     return index_map;
 }
 
-std::map<size_t, size_t> PreciseHashAnnotator::compute_permutation_map(
-        size_t num_columns,
-        const std::set<size_t> &prefix_indices) {
-    std::map<size_t, size_t> index_map;
+std::unordered_map<pos_t, pos_t> PreciseHashAnnotator::compute_permutation_map(
+        pos_t num_columns,
+        const std::set<pos_t> &prefix_indices) {
+    std::unordered_map<pos_t, pos_t> index_map;
     size_t index_size = 0;
     for (auto i : prefix_indices) {
         index_map[i] = index_size++;
     }
+    if (index_map.empty())
+        return index_map;
     for (size_t i = 0; i < num_columns; ++i) {
         index_size += index_map.emplace(i, index_size).second;
     }
@@ -39,7 +53,9 @@ std::map<size_t, size_t> PreciseHashAnnotator::compute_permutation_map(
 
 std::vector<uint64_t>
 PreciseHashAnnotator::permute_indices(const std::vector<uint64_t> &a,
-                                      const std::map<size_t, size_t> &index_map) const {
+                                      const std::unordered_map<pos_t, pos_t> &index_map) const {
+    if (index_map.empty())
+        return a;
     std::vector<uint64_t> b(a.size());
     for (size_t i = 0; i < annotation_exact.size(); ++i) {
         if (test_bit(a, i))
@@ -84,7 +100,7 @@ void PreciseHashAnnotator::load(const std::string &filename) {
 
 uint64_t PreciseHashAnnotator::export_rows(std::ostream &out, bool permute) const {
     uint64_t written_bytes = serialization::serializeNumber(out, annotation_exact.kmer_map_.size());
-    std::map<size_t, size_t> index_map;
+    std::unordered_map<pos_t, pos_t> index_map;
     if (permute && prefix_indices_.size()) {
         index_map = compute_permutation_map();
     }
@@ -108,7 +124,7 @@ uint64_t PreciseHashAnnotator::export_rows(const std::string &filename, bool per
 }
 
 void PreciseHashAnnotator::add_sequence(const std::string &sequence,
-                                        size_t column,
+                                        pos_t column,
                                         bool rooted) {
     std::string preprocessed_seq = graph_.transform_sequence(sequence, rooted);
 
@@ -116,7 +132,7 @@ void PreciseHashAnnotator::add_sequence(const std::string &sequence,
     if (preprocessed_seq.size() < graph_.get_k() + 1)
         return;
 
-    if (column < static_cast<size_t>(-1) && column >= annotation_exact.size())
+    if (column < static_cast<pos_t>(-1) && column >= annotation_exact.size())
         annotation_exact.resize(column + 1);
 
     for (size_t i = 0; i + graph_.get_k() < preprocessed_seq.size(); ++i) {
@@ -473,7 +489,7 @@ PreciseHashAnnotator::annotate_edge(DeBruijnGraphWrapper::edge_index i, bool per
     return annotation_from_kmer(get_kmer(i), permute);
 }
 
-std::set<size_t>
+std::set<pos_t>
 PreciseHashAnnotator::annotate_edge_indices(DeBruijnGraphWrapper::edge_index i, bool permute) const {
     auto find = annotation_exact.kmer_map_.find(get_kmer(i));
     if (find == annotation_exact.kmer_map_.end())
@@ -481,11 +497,27 @@ PreciseHashAnnotator::annotate_edge_indices(DeBruijnGraphWrapper::edge_index i, 
     if (!permute)
         return find->second;
     auto index_map = compute_permutation_map();
-    std::set<size_t> find_mapped;
-    for (auto i : find->second) {
-        find_mapped.insert(index_map[i]);
-    }
+    if (index_map.empty())
+        return find->second;
+    std::vector<pos_t> find_mapped_v;
+    find_mapped_v.reserve(find->second.size());
+    std::transform(find->second.begin(),
+                   find->second.end(),
+                   std::back_inserter(find_mapped_v),
+                   [&](pos_t i) {
+                       return index_map[i];
+                   });
+    return std::set<pos_t>(find_mapped_v.begin(), find_mapped_v.end());
+    /*
+    std::set<pos_t> find_mapped;
+    std::transform(find->second.begin(),
+                   find->second.end(),
+                   std::inserter(find_mapped, find_mapped.begin()),
+                   [&](pos_t i) {
+                       return index_map[i];
+                   });
     return find_mapped;
+    */
 }
 
 std::vector<uint64_t>

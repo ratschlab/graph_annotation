@@ -10,6 +10,80 @@ std::mutex construct_mtx, merge_mtx;
 
 WaveletTrie::WaveletTrie() : root(nullptr), p_(1) {}
 WaveletTrie::WaveletTrie(size_t p) : root(nullptr), p_(p) {}
+//WaveletTrie::WaveletTrie() : root(nullptr), thread_queue_(1) {}
+//WaveletTrie::WaveletTrie(size_t p) : root(nullptr), thread_queue_(p) {}
+
+//copy
+WaveletTrie::WaveletTrie(const Node &node, size_t p)
+    : root(new Node(const_cast<const Node&>(node))),
+      //thread_queue_(p) {}
+      p_(p) {}
+
+WaveletTrie::WaveletTrie(Node *node, size_t p)
+    : root(node),
+      //thread_queue_(p) {}
+      p_(p) {}
+
+// copy constructor
+WaveletTrie::WaveletTrie(const WaveletTrie &other)
+    //: thread_queue_(other.thread_queue_.num_workers()) {
+    : p_(other.p_) {
+    if (other.root) {
+        root = new Node(const_cast<const Node&>(*other.root));
+    }
+}
+
+// move constructor
+WaveletTrie::WaveletTrie(WaveletTrie&& other) noexcept
+    : root(other.root),
+      //thread_queue_(std::move(other.thread_queue_)) {
+      p_(other.p_) {
+    other.root = nullptr;
+}
+
+// copy assign
+WaveletTrie& WaveletTrie::operator=(const WaveletTrie &other) {
+    if (&other != this) {
+        WaveletTrie tmp(const_cast<const WaveletTrie&>(other));
+        std::swap(*this, tmp);
+    }
+    return *this;
+}
+
+// move assign
+WaveletTrie& WaveletTrie::operator=(WaveletTrie&& other) noexcept {
+    std::swap(root, other.root);
+    std::swap(p_, other.p_);
+    return *this;
+}
+
+template <class Iterator>
+WaveletTrie::WaveletTrie(Iterator row_begin, Iterator row_end, size_t p)
+    //: thread_queue_(p) {
+    : p_(p) {
+    if (std::distance(row_begin, row_end) > 0) {
+        Prefix prefix = WaveletTrie::Node::longest_common_prefix(row_begin, row_end, 0);
+        if (prefix.allequal) {
+            root = new Node(std::distance(row_begin, row_end));
+            root->set_alpha_(*row_begin, 0);
+        } else {
+            utils::ThreadPool thread_queue(p_);
+            root = new Node();
+            root->set_alpha_(*row_begin, 0, prefix.col);
+            thread_queue.enqueue([=, &thread_queue]() {
+                root->fill_beta(row_begin, row_end, 0, thread_queue, prefix);
+            });
+            thread_queue.join();
+        }
+    } else {
+        root = NULL;
+    }
+#ifdef PRINT
+    print();
+    std::cout << "\n";
+#endif
+}
+
 
 size_t WaveletTrie::serialize(std::ostream &out) const {
     if (root)
@@ -48,7 +122,7 @@ bool WaveletTrie::operator!=(const WaveletTrie &other) const {
 
 size_t WaveletTrie::Node::serialize(std::ostream &out) const {
     size_t written_bytes = ::annotate::serialize(out, alpha_)
-                         + rrr_t(beta_).serialize(out);
+                         + beta_.serialize(out);
 
     char val = (bool)child_[0] | ((uint8_t)((bool)child_[1]) << 1);
     out.write(&val, 1);
@@ -70,6 +144,28 @@ size_t WaveletTrie::Node::serialize(std::ostream &out) const {
 
 void WaveletTrie::Node::print(std::ostream &out) const {
     out << alpha_ << ":" << beta_ << ";" << is_leaf() << std::endl;
+}
+
+std::pair<size_t, size_t> WaveletTrie::stats() const {
+    std::pair<size_t, size_t> num_uniq_set_bits = {0, 0};
+    if (!root)
+        return num_uniq_set_bits;
+    std::stack<Node*> node_stack;
+    node_stack.emplace(root);
+    while (node_stack.size()) {
+        Node *curnode = node_stack.top();
+        node_stack.pop();
+        num_uniq_set_bits.second += (popcount(curnode->alpha_) - 1) * curnode->size() + curnode->popcount;
+        if (curnode->is_leaf()) {
+            num_uniq_set_bits.first++;
+            continue;
+        }
+        if (curnode->child_[0])
+            node_stack.emplace(curnode->child_[0]);
+        if (curnode->child_[1])
+            node_stack.emplace(curnode->child_[1]);
+    }
+    return num_uniq_set_bits;
 }
 
 size_t WaveletTrie::Node::load(std::istream &in) {
@@ -158,7 +254,7 @@ bool WaveletTrie::Node::operator!=(const WaveletTrie::Node &other) const {
     return !(*this == other);
 }
 
-void WaveletTrie::print() {
+void WaveletTrie::print() const {
     if (!root) {
         std::cout << ":\t1:;1\n";
         return;
@@ -179,7 +275,7 @@ void WaveletTrie::print() {
 
 
 template<>
-void WaveletTrie::Node::set_alpha_<cpp_int>(const cpp_int &alpha, size_t col, size_t col_end) {
+void WaveletTrie::Node::set_alpha_<cpp_int>(const cpp_int &alpha, pos_t col, pos_t col_end) {
     //alpha_ = (*row_begin >> col) % mask; //reference
     mpz_t& alph = alpha_.backend().data();
     mpz_tdiv_q_2exp(alph, alpha.backend().data(), col);
@@ -188,7 +284,7 @@ void WaveletTrie::Node::set_alpha_<cpp_int>(const cpp_int &alpha, size_t col, si
 }
 
 template <>
-void WaveletTrie::Node::set_alpha_<std::set<size_t>>(const std::set<size_t> &indices, size_t col, size_t col_end) {
+void WaveletTrie::Node::set_alpha_<std::set<pos_t>>(const std::set<pos_t> &indices, pos_t col, pos_t col_end) {
     alpha_ = 0;
     auto &alph = alpha_.backend().data();
     for (auto it = indices.lower_bound(col); it != indices.end(); ++it) {
@@ -200,7 +296,7 @@ void WaveletTrie::Node::set_alpha_<std::set<size_t>>(const std::set<size_t> &ind
 }
 
 template <class IndexContainer>
-void WaveletTrie::Node::set_alpha_(const IndexContainer &indices, size_t col, size_t col_end) {
+void WaveletTrie::Node::set_alpha_(const IndexContainer &indices, pos_t col, pos_t col_end) {
     alpha_ = 0;
     auto &alph = alpha_.backend().data();
     for (auto it = indices.begin(); it != indices.end(); ++it) {
@@ -213,7 +309,7 @@ void WaveletTrie::Node::set_alpha_(const IndexContainer &indices, size_t col, si
 }
 
 template<>
-void WaveletTrie::Node::set_alpha_<cpp_int>(const cpp_int &alpha, size_t col) {
+void WaveletTrie::Node::set_alpha_<cpp_int>(const cpp_int &alpha, pos_t col) {
     mpz_t& alph = alpha_.backend().data();
     mpz_tdiv_q_2exp(alph, alpha.backend().data(), col);
     if (is_nonzero(alpha_)) {
@@ -224,7 +320,7 @@ void WaveletTrie::Node::set_alpha_<cpp_int>(const cpp_int &alpha, size_t col) {
 }
 
 template <>
-void WaveletTrie::Node::set_alpha_<std::set<size_t>>(const std::set<size_t> &indices, size_t col) {
+void WaveletTrie::Node::set_alpha_<std::set<pos_t>>(const std::set<pos_t> &indices, pos_t col) {
     alpha_ = 0;
     auto &alph = alpha_.backend().data();
     for (auto it = indices.lower_bound(col); it != indices.end(); ++it) {
@@ -238,7 +334,7 @@ void WaveletTrie::Node::set_alpha_<std::set<size_t>>(const std::set<size_t> &ind
 }
 
 template <class IndexContainer>
-void WaveletTrie::Node::set_alpha_(const IndexContainer &indices, size_t col) {
+void WaveletTrie::Node::set_alpha_(const IndexContainer &indices, pos_t col) {
     alpha_ = 0;
     auto &alph = alpha_.backend().data();
     for (auto it = indices.begin(); it != indices.end(); ++it) {
@@ -252,81 +348,15 @@ void WaveletTrie::Node::set_alpha_(const IndexContainer &indices, size_t col) {
     }
 }
 
-//copy
-WaveletTrie::WaveletTrie(const Node &node, size_t p)
-    : root(new Node(const_cast<const Node&>(node))),
-      p_(p) {}
-
-WaveletTrie::WaveletTrie(Node *node, size_t p)
-    : root(node),
-      p_(p) {}
-
-// copy constructor
-WaveletTrie::WaveletTrie(const WaveletTrie &other)
-    : p_(other.p_) {
-    if (other.root) {
-        root = new Node(const_cast<const Node&>(*other.root));
-    }
-}
-
-// move constructor
-WaveletTrie::WaveletTrie(WaveletTrie&& other) noexcept
-    : root(other.root),
-      p_(other.p_) {
-    other.root = nullptr;
-}
-
-// copy assign
-WaveletTrie& WaveletTrie::operator=(const WaveletTrie &other) {
-    if (&other != this) {
-        WaveletTrie tmp(const_cast<const WaveletTrie&>(other));
-        std::swap(*this, tmp);
-    }
-    return *this;
-}
-
-// move assign
-WaveletTrie& WaveletTrie::operator=(WaveletTrie&& other) noexcept {
-    std::swap(root, other.root);
-    std::swap(p_, other.p_);
-    return *this;
-}
-
-template <class Iterator>
-WaveletTrie::WaveletTrie(Iterator row_begin, Iterator row_end, size_t p)
-    : p_(p) {
-    if (std::distance(row_begin, row_end) > 0) {
-        Prefix prefix = WaveletTrie::Node::longest_common_prefix(row_begin, row_end, 0);
-        if (prefix.allequal) {
-            root = new Node(std::distance(row_begin, row_end));
-            root->set_alpha_(*row_begin, 0);
-        } else {
-            utils::ThreadPool thread_queue(p_);
-            root = new Node();
-            root->set_alpha_(*row_begin, 0, prefix.col);
-            thread_queue.enqueue([=, &thread_queue]() {
-                root->fill_beta(row_begin, row_end, 0, thread_queue, prefix);
-            });
-            thread_queue.join();
-        }
-    } else {
-        root = NULL;
-    }
-#ifdef PRINT
-    print();
-    std::cout << "\n";
-#endif
-}
-
 template <class Iterator>
 void WaveletTrie::Node::fill_beta(const Iterator &row_begin, const Iterator &row_end,
-        const size_t &col, utils::ThreadPool &thread_queue, Prefix prefix) {
+        const pos_t &col, utils::ThreadPool &thread_queue, Prefix prefix) {
     //TODO col already used by Prefix?
     std::ignore = col;
     if (std::distance(row_begin, row_end)) {
-        assert(prefix.col != -1llu);
+        assert(prefix.col != static_cast<pos_t>(-1));
         assert(!prefix.allequal);
-        size_t col_end = prefix.col;
+        pos_t col_end = prefix.col;
 
         //set beta and compute common prefices
         bv_t beta;
@@ -365,20 +395,20 @@ void WaveletTrie::Node::fill_beta(const Iterator &row_begin, const Iterator &row
 
         //TODO: copied code here
         //handle trivial cases first
-        if (prefices[0].col == -1llu) {
+        if (prefices[0].col == static_cast<pos_t>(-1)) {
             child_[0] = new Node(std::distance(row_begin, split));
             child_[0]->set_alpha_(*row_begin, col_end + 1);
             assert(child_[0]->size() == rank0(beta_.size()));
         }
 
-        if (prefices[1].col == -1llu) {
+        if (prefices[1].col == static_cast<pos_t>(-1)) {
             child_[1] = new Node(std::distance(split, row_end));
             child_[1]->set_alpha_(*split, col_end + 1);
             assert(child_[1]->size() == rank1(beta_.size()));
         }
 
         //then recursive calls
-        if (prefices[0].col != -1llu) {
+        if (prefices[0].col != static_cast<pos_t>(-1)) {
             prefices[0].allequal = false;
             child_[0] = new Node();
             child_[0]->set_alpha_(*row_begin, col_end + 1, prefices[0].col);
@@ -388,7 +418,7 @@ void WaveletTrie::Node::fill_beta(const Iterator &row_begin, const Iterator &row
             });
         }
 
-        if (prefices[1].col != -1llu) {
+        if (prefices[1].col != static_cast<pos_t>(-1)) {
             prefices[1].allequal = false;
             child_[1] = new Node();
             child_[1]->set_alpha_(*split, col_end + 1, prefices[1].col);
@@ -461,7 +491,7 @@ WaveletTrie::~WaveletTrie() noexcept {
 }
 
 //TODO: use callbacks to avoid duplicated code
-WaveletTrie::Node* WaveletTrie::traverse_down(Node *node, size_t &i, size_t &j) {
+WaveletTrie::Node* WaveletTrie::traverse_down(Node *node, size_t &i, pos_t &j) {
     size_t curmsb;
     while (!node->is_leaf() && (curmsb = msb(node->alpha_) + 1) < j) {
         j -= curmsb;
@@ -478,7 +508,7 @@ WaveletTrie::Node* WaveletTrie::traverse_down(Node *node, size_t &i, size_t &j) 
     return node;
 }
 
-void WaveletTrie::toggle_bit(size_t i, size_t j) {
+void WaveletTrie::toggle_bit(size_t i, pos_t j) {
     assert(i < size());
     WaveletTrie wtr_int(traverse_down(root, i, j));
     auto cur_annot = wtr_int.at(i);
@@ -492,11 +522,13 @@ void WaveletTrie::toggle_bit(size_t i, size_t j) {
     wtr_int.root = NULL;
 }
 
-cpp_int WaveletTrie::at(size_t i, size_t j) const {
+cpp_int WaveletTrie::at(size_t i, pos_t j) const {
     assert(i < size());
     Node *node = root;
     size_t length = 0;
     cpp_int annot;
+    if (!node)
+        return annot;
     while (!node->is_leaf() && length < j) {
         annot |= node->alpha_ << length;
         length += msb(node->alpha_) + 1;
@@ -516,9 +548,9 @@ cpp_int WaveletTrie::at(size_t i, size_t j) const {
     return annot;
 }
 
-void WaveletTrie::set_bit(size_t i, size_t j) {
+void WaveletTrie::set_bit(size_t i, pos_t j) {
     assert(i < size());
-    WaveletTrie wtr_int(traverse_down(root, i, j));
+    WaveletTrie wtr_int(traverse_down(root, i, j), p_);
     auto cur_annot = wtr_int.at(i);
     if (bit_test(cur_annot, j)) {
         wtr_int.root = NULL;
@@ -532,7 +564,35 @@ void WaveletTrie::set_bit(size_t i, size_t j) {
     wtr_int.root = NULL;
 }
 
-void WaveletTrie::unset_bit(size_t i, size_t j) {
+template <class Container>
+void WaveletTrie::set_bits(Container &is, pos_t j) {
+    if (is.empty())
+        return;
+    assert(*is.rbegin() < size());
+
+    std::vector<cpp_int> edges_old;
+    std::vector<pos_t> from, to;
+    from.reserve(is.size());
+    to.reserve(is.size());
+    size_t oldsize = size();
+    for (auto &i : is) {
+        from.push_back(size() + edges_old.size());
+        to.push_back(i);
+        edges_old.push_back(at(i));
+        bit_set(edges_old.back(), j);
+    }
+    insert(WaveletTrie(edges_old));
+    swap(from, to, oldsize);
+    //std::cout << "Swap\n";
+    std::vector<pos_t> indices(edges_old.size());
+    std::iota(indices.begin(), indices.end(), oldsize);
+    remove(indices);
+    assert(size() == oldsize);
+}
+template void WaveletTrie::set_bits(std::vector<pos_t>&, pos_t);
+template void WaveletTrie::set_bits(std::set<pos_t>&, pos_t);
+
+void WaveletTrie::unset_bit(size_t i, pos_t j) {
     assert(i < size());
     WaveletTrie wtr_int(traverse_down(root, i, j));
     auto cur_annot = wtr_int.at(i);
@@ -559,7 +619,7 @@ bool WaveletTrie::Node::is_leaf() const {
 bool WaveletTrie::Node::check(bool ind) {
     size_t rank = ind ? popcount : size() - popcount;
     //assert(rank1(size()) == popcount);
-    assert(popcount != size());
+    //assert(popcount != size());
     if (!popcount) {
         assert(!child_[1]);
         assert(!child_[0]);
@@ -753,7 +813,7 @@ void WaveletTrie::insert(const WaveletTrie &wtr, size_t i) {
         root = new Node(const_cast<const Node&>(*wtr.root));
         return;
     }
-    if (i == -1llu) {
+    if (i == static_cast<size_t>(-1)) {
         i = size();
     }
     WaveletTrie tmp(wtr);
@@ -794,51 +854,193 @@ void WaveletTrie::insert(const T &a, size_t i) {
     }
 }
 
-void WaveletTrie::remove(size_t j) {
-    assert(j < size());
+void WaveletTrie::swap(const std::vector<pos_t> &from,
+                       const std::vector<pos_t> &to,
+                       pos_t remove_after) {
+    if (from.size() != to.size()) {
+        std::cerr << "Invalid map\n";
+        exit(1);
+    }
+    if (!from.size())
+        return;
+    std::ignore = remove_after;
+
+    //std::cout << "Base\n";
+    //print();
+    //std::cout << "\n";
+    typedef std::pair<pos_t, pos_t> SwapState;
+    struct NodeState {
+        Node *node;
+        std::vector<SwapState> swap_states;
+        std::vector<SwapState> move_states;
+        size_t remove_after;
+        NodeState(Node *node) : node(node) {}
+        NodeState(Node *node,
+                  const std::vector<SwapState> &swap_states,
+                  const std::vector<SwapState> &move_states = {})
+            : node(node), swap_states(swap_states), move_states(move_states) {}
+    };
+
+    utils::ThreadPool thread_queue(p_);
+    std::stack<NodeState> node_stack;
+    std::vector<SwapState> init_states;
+    init_states.reserve(from.size());
+    for (size_t i = 0; i < from.size(); ++i) {
+        init_states.emplace_back(from[i], to[i]);
+    }
+    node_stack.emplace(root, init_states);
+    //node_stack.top().remove_after = remove_after;
+
+    while (node_stack.size()) {
+        auto curstate = node_stack.top();
+        //auto curstate = node_stack.top().get();
+        node_stack.pop();
+        Node *node = curstate.node;
+        assert(node);
+        if (node->is_leaf() || (curstate.swap_states.empty() && curstate.move_states.empty()))
+            continue;
+
+        NodeState next_states[2] = {NodeState{node->child_[0]}, NodeState{node->child_[1]}};
+        //next_states[1].remove_after = node->rank1(curstate.remove_after);
+        //next_states[0].remove_after = curstate.remove_after - next_states[1].remove_after;
+        for (auto &state : curstate.swap_states) {
+            assert(state.first < node->size());
+            assert(state.second < node->size());
+            bool from_child = node->beta_[state.first];
+            bool to_child = node->beta_[state.second];
+            if (from_child == to_child) {
+                //stay in swap state
+                if (!node->child_[from_child]->is_leaf()) {
+                    next_states[from_child].swap_states.emplace_back(
+                            from_child ? node->rank1(state.first)  : node->rank0(state.first),
+                            from_child ? node->rank1(state.second) : node->rank0(state.second));
+                }
+            } else {
+                //transfer to move state
+                if (!node->child_[from_child]->is_leaf()) {
+                   next_states[from_child].move_states.emplace_back(
+                           from_child ? node->rank1(state.first)  : node->rank0(state.first),
+                           from_child ? node->rank1(state.second) : node->rank0(state.second));
+                }
+                if (!node->child_[to_child]->is_leaf()) {
+                   next_states[to_child].move_states.emplace_back(
+                           to_child ? node->rank1(state.second): node->rank0(state.second),
+                           to_child ? node->rank1(state.first) : node->rank0(state.first));
+                }
+            }
+        }
+        for (auto &state : curstate.move_states) {
+            bool from_child = node->beta_[state.first];
+            if (!node->child_[from_child]->is_leaf()) {
+                next_states[from_child].move_states.emplace_back(
+                        from_child ? node->rank1(state.first)  : node->rank0(state.first),
+                        from_child ? node->rank1(state.second) : node->rank0(state.second));
+            }
+        }
+        node_stack.emplace(std::move(next_states[0]));
+        node_stack.emplace(std::move(next_states[1]));
+
+        thread_queue.enqueue([=]() {
+            auto bv = swap_bits(node->beta_, curstate.swap_states);
+            node->beta_ = beta_t(move_bits(bv,
+                                           curstate.move_states,
+                                           curstate.remove_after));
+            node->support = false;
+        });
+    }
+    thread_queue.join();
+}
+
+void WaveletTrie::remove(pos_t j) {
+    remove(std::vector<pos_t>{j});
+}
+
+void WaveletTrie::remove(const std::vector<pos_t> &js) {
+    if (!js.size())
+        return;
+    assert(js.back() < size());
 #ifndef NDEBUG
-    size_t oldsize = size();
+    size_t expsize = size() - js.size();
 #endif
-    if (size() == 1) {
+    //if (size() == 1) {
+    if (size() <= js.size()) {
         delete root;
         root = NULL;
         assert(size() == 0);
         return;
     }
 
-    Node *node = root;
-    while (!node->is_leaf()) {
-        bool curbit = node->beta_[j];
-        size_t next_j;
+    struct NodeState {
+        Node *node;
+        std::vector<pos_t> js;
+        NodeState(Node *node, const std::vector<pos_t> &js)
+            : node(node), js(std::move(js)) {}
+    };
+
+    std::stack<NodeState> node_stack;
+    node_stack.emplace(root, std::move(js));
+
+    //Node *node = root;
+    //while (!node->is_leaf()) {
+    while (node_stack.size()) {
+        auto curstate = node_stack.top();
+        node_stack.pop();
+        Node *node = curstate.node;
+        assert(node);
+        //while (true) {
+        if (node->is_leaf()) {
+            assert(!node->popcount);
+            node->beta_ = beta_t(bv_t(node->size() - curstate.js.size()));
+            //curstate.node->beta_ = beta_t(bv_t(curstate.node->size() - std::distance(curstate.begin, curstate.end)));
+            node->support = false;
+            continue;
+            //break;
+        }
+        //bool curbit = node->beta_[j];
+        //size_t next_j;
         size_t curpopcount = node->popcount;
+        std::vector<pos_t> next_js[2];
+        //std::vector<size_t> js_temp(curstate.begin, curstate.end);
+        //std::vector<size_t> next_js0;
+        for (size_t i = 0; i < curstate.js.size(); ++i) {
+            if (node->beta_[curstate.js[i]]) {
+            //if (node->beta_[*it]) {
+                next_js[1].emplace_back(node->rank1(curstate.js[i]));
+                curpopcount--;
+            } else {
+                next_js[0].emplace_back(node->rank0(curstate.js[i]));
+            }
+        }
+        //std::cout << "\n";
+        /*
         if (curbit) {
             next_j = node->rank1(j);
             curpopcount--;
         } else {
             next_j = node->rank0(j);
         }
-        if ((curbit && !curpopcount)
-                || (!curbit && curpopcount == node->beta_.size() - 1)) {
+        */
+        //if ((curbit && !curpopcount)
+        //        || (!curbit && curpopcount == node->beta_.size() - 1)) {
+        //curpopcount += added - subtracted;
+        //fold one side in
+        if (!curpopcount
+                || curpopcount == node->beta_.size() - curstate.js.size()) {
             //merge nodes
             bool child = static_cast<bool>(curpopcount);
-            assert(node->child_[!child]->is_leaf());
-            assert(node->child_[!child]->size() == 1);
             delete node->child_[!child];
             node->child_[!child] = NULL;
             size_t curmsb = msb(node->alpha_);
-            //std::cout << std::hex << node->alpha_ << "\t";
             if (!child) {
                 bit_unset(node->alpha_, curmsb);
             }
             Node *othnode = node->child_[child];
             assert(othnode);
+            assert(othnode->size() >= next_js[child].size());
             node->child_[child] = NULL;
             node->alpha_ |= othnode->alpha_ << (curmsb + 1);
             assert(node->alpha_ != 0);
-            //std::cout << std::hex << node->alpha_ << "\t";
-            assert(othnode->beta_.size() == node->beta_.size() - 1);
             node->beta_ = std::move(othnode->beta_);
-            //std::cout << node->beta_ << "\n";
             node->popcount = othnode->popcount;
             node->rank1_.set_vector(&node->beta_);
             std::swap(node->child_[0], othnode->child_[0]);
@@ -852,21 +1054,68 @@ void WaveletTrie::remove(size_t j) {
                 else
                     node->alpha_ = 1;
             }
-            return;
+            if (next_js[child].size()) {
+                node_stack.emplace(node, std::move(next_js[child]));
+                //curstate.js = std::move(next_js[child]);
+            }
+            //return;
+            continue;
         } else {
+            /*
             node->beta_ = beta_t(remove_range(node->beta_, j, j + 1));
             node->support = false;
             if (curbit)
                 node->popcount--;
+            */
+            node->beta_ = beta_t(remove_bits(node->beta_, curstate.js));
+            node->support = false;
+            node->popcount = curpopcount;
         }
-        j = next_j;
-        node = curbit ? node->child_[1] : node->child_[0];
-        assert(node);
+        //j = next_j;
+        //node = curbit ? node->child_[1] : node->child_[0];
+        //assert(node);
+        /*
+        if (next_js[1].size() && next_js[0].size()) {
+            node_stack.emplace(node->child_[1], std::move(next_js[1]), std::move(next_swap[1]));
+            node_stack.emplace(node->child_[0], std::move(next_js[0]), std::move(next_swap[0]));
+            break;
+        } else if (!next_js[1].size() && !next_js[0].size()) {
+            break;
+        } else {
+            if (next_js[1].size()) {
+                node = node->child_[1];
+                curstate.js = std::move(next_js[1]);
+                curstate.swap = std::move(next_swap[1]);
+            }
+            if (next_js[0].size()) {
+                node = node->child_[0];
+                curstate.js = std::move(next_js[0]);
+                curstate.swap = std::move(next_swap[0]);
+            }
+        }
+        */
+        if (node->child_[1]->is_leaf()) {
+            Node *child = node->child_[1];
+            child->beta_ = beta_t(bv_t(curpopcount));
+            child->support = false;
+        } else if (next_js[1].size()) {
+            node_stack.emplace(node->child_[1], std::move(next_js[1]));
+        }
+        if (node->child_[0]->is_leaf()) {
+            Node *child = node->child_[0];
+            child->beta_ = beta_t(bv_t(node->size() - curpopcount));
+            child->support = false;
+        } else if (next_js[0].size()) {
+            node_stack.emplace(node->child_[0], std::move(next_js[0]));
+        }
+        //}
     }
+    /*
     assert(!node->popcount);
     node->beta_ = beta_t(bv_t(node->size() - 1));
     node->support = false;
-    assert(oldsize - 1 == size());
+    */
+    assert(expsize  == size());
 }
 
 WaveletTrie::Node::~Node() noexcept {
@@ -885,7 +1134,7 @@ bool WaveletTrie::Node::overlap_prefix_(Node &curnode, Node &othnode) {
     if (curnode.alpha_ == othnode.alpha_) {
         return false;
     }
-    size_t common_pref = next_different_bit_alpha(curnode, othnode);
+    pos_t common_pref = next_different_bit_alpha(curnode, othnode);
 #ifdef PRINT
     std::cout << common_pref << "\t";
 #endif
@@ -919,32 +1168,34 @@ bool WaveletTrie::Node::overlap_prefix_(Node &curnode, Node &othnode) {
 
 //find first different bit between two cpp_ints
 template <class IndexContainer>
-size_t WaveletTrie::Node::next_different_bit_(const IndexContainer &a, const IndexContainer &b,
-        size_t col, size_t next_col) {
+pos_t WaveletTrie::Node::next_different_bit_(
+        const IndexContainer &a, const IndexContainer &b,
+        pos_t col, pos_t next_col) {
     if (col == next_col)
         return next_col;
-    size_t ranges[3] = {next_bit(a, col), next_bit(b, col), next_col};
+    pos_t ranges[3] = {next_bit(a, col), next_bit(b, col), next_col};
     while (ranges[0] == ranges[1] && ranges[0] < ranges[2] && ranges[1] < ranges[2]) {
         ranges[0] = next_bit(a, ranges[0] + 1);
         ranges[1] = next_bit(b, ranges[1] + 1);
     }
-    size_t next_col2 = std::min(ranges[0], ranges[1]);
+    pos_t next_col2 = std::min(ranges[0], ranges[1]);
     if (ranges[0] == ranges[1] || next_col2 >= ranges[2])
         next_col2 = ranges[2];
     return next_col2;
 }
 
 template<>
-size_t WaveletTrie::Node::next_different_bit_<cpp_int>(const cpp_int &a, const cpp_int &b,
-        size_t col, size_t next_col) {
+pos_t WaveletTrie::Node::next_different_bit_<cpp_int>(
+        const cpp_int &a, const cpp_int &b,
+        pos_t col, pos_t next_col) {
     if (col == next_col)
         return next_col;
 
     //try to move forward one limb at a time
     //get amount to shift based on limb size
     size_t shift = __builtin_clzll(mp_bits_per_limb) ^ 63;
-    size_t i = col >> shift;
-    size_t end = next_col >> shift;
+    pos_t i = col >> shift;
+    pos_t end = next_col >> shift;
     if (end > i) {
         const mpz_t &a_m = a.backend().data();
         const mpz_t &b_m = b.backend().data();
@@ -976,30 +1227,30 @@ size_t WaveletTrie::Node::next_different_bit_<cpp_int>(const cpp_int &a, const c
     }
 
     //when at first different limb, use mpz API
-    size_t ranges[3] = {next_bit(a, col), next_bit(b, col), next_col};
+    pos_t ranges[3] = {next_bit(a, col), next_bit(b, col), next_col};
     while (ranges[0] == ranges[1] && ranges[0] < ranges[2] && ranges[1] < ranges[2]) {
         ranges[0] = next_bit(a, ranges[0] + 1);
         ranges[1] = next_bit(b, ranges[1] + 1);
     }
-    size_t next_col2 = std::min(ranges[0], ranges[1]);
+    pos_t next_col2 = std::min(ranges[0], ranges[1]);
     if (ranges[0] == ranges[1] || next_col2 >= ranges[2])
         next_col2 = ranges[2];
     return next_col2;
 }
 
-size_t WaveletTrie::Node::next_different_bit_alpha(const Node &curnode, const Node &othnode) {
+pos_t WaveletTrie::Node::next_different_bit_alpha(const Node &curnode, const Node &othnode) {
     assert(curnode.alpha_ != 0);
     assert(othnode.alpha_ != 0);
 
     //TODO: replace this with a single pass
     auto cur = curnode.alpha_;
     auto oth = othnode.alpha_;
-    size_t curmsb = msb(cur);
-    size_t othmsb = msb(oth);
+    pos_t curmsb = msb(cur);
+    pos_t othmsb = msb(oth);
     bit_unset(cur, curmsb);
     bit_unset(oth, othmsb);
-    size_t next_set_bit = next_different_bit_(cur, oth);
-    if (next_set_bit == -1llu) {
+    pos_t next_set_bit = next_different_bit_(cur, oth);
+    if (next_set_bit == static_cast<pos_t>(-1)) {
         if (curnode.is_leaf() == othnode.is_leaf()) {
             return std::min(curmsb, othmsb);
         }
@@ -1016,7 +1267,7 @@ size_t WaveletTrie::Node::next_different_bit_alpha(const Node &curnode, const No
 }
 
 template <class Iterator>
-Prefix WaveletTrie::Node::longest_common_prefix(const Iterator &row_begin, const Iterator &row_end, const size_t &col) {
+Prefix WaveletTrie::Node::longest_common_prefix(const Iterator &row_begin, const Iterator &row_end, const pos_t &col) {
     Prefix prefix;
     //empty prefix
     if (row_begin >= row_end) {
@@ -1024,13 +1275,13 @@ Prefix WaveletTrie::Node::longest_common_prefix(const Iterator &row_begin, const
         prefix.allequal = true;
         return prefix;
     }
-    //prefix.col = -1llu;
+    //prefix.col = static_cast<pos_t>(-1);
     for (auto it = row_begin + 1; it != row_end; ++it) {
         prefix.col = next_different_bit_(*row_begin, *it, col, prefix.col);
         if (prefix.col == col)
             break;
     }
-    if (prefix.col == -1llu) {
+    if (prefix.col == static_cast<pos_t>(-1)) {
         //all zeros or all equal
         if (is_nonzero(*row_begin)) {
             prefix.col = std::max(msb(*row_begin), col);
@@ -1098,7 +1349,7 @@ void WaveletTrie::Node::merge_beta_(Node &curnode, const Node &othnode, size_t i
     }
     // TODO: this test doesn't compile since othnode is now const
     //assert(othnode.popcount == othnode.rank1(othnode.size()));
-    if (i == -1llu) {
+    if (i == static_cast<size_t>(-1)) {
         i = curnode.beta_.size();
     }
     assert(i <= curnode.beta_.size());
@@ -1141,11 +1392,11 @@ size_t WaveletTrie::Node::rank1(const size_t i) {
 template WaveletTrie::WaveletTrie(std::vector<cpp_int>::iterator&, std::vector<cpp_int>::iterator&, size_t);
 template WaveletTrie::WaveletTrie(std::vector<cpp_int>&, size_t);
 template WaveletTrie::WaveletTrie(std::vector<cpp_int>&&, size_t);
-template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>::iterator&, std::vector<std::set<size_t>>::iterator&, size_t);
-template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>&, size_t);
-template WaveletTrie::WaveletTrie(std::vector<std::set<size_t>>&&, size_t);
-template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>::iterator&, std::vector<std::vector<size_t>>::iterator&, size_t);
-template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>&, size_t);
-template WaveletTrie::WaveletTrie(std::vector<std::vector<size_t>>&&, size_t);
+template WaveletTrie::WaveletTrie(std::vector<std::set<pos_t>>::iterator&, std::vector<std::set<pos_t>>::iterator&, size_t);
+template WaveletTrie::WaveletTrie(std::vector<std::set<pos_t>>&, size_t);
+template WaveletTrie::WaveletTrie(std::vector<std::set<pos_t>>&&, size_t);
+template WaveletTrie::WaveletTrie(std::vector<std::vector<pos_t>>::iterator&, std::vector<std::vector<pos_t>>::iterator&, size_t);
+template WaveletTrie::WaveletTrie(std::vector<std::vector<pos_t>>&, size_t);
+template WaveletTrie::WaveletTrie(std::vector<std::vector<pos_t>>&&, size_t);
 
 };
