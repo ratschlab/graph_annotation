@@ -197,6 +197,7 @@ int main(int argc, const char *argv[]) {
         double precise_const_time = 0;
         Timer result_timer;
         DBGHash hashing_graph(config->k);
+        wt_annotator.reset(new annotate::WaveletTrieAnnotator(hashing_graph, config->p));
         precise_annotator.reset(new hash_annotate::PreciseHashAnnotator(hashing_graph));
         std::unordered_map<std::string, size_t> annot_map;
         if (!config->infbase.empty()) {
@@ -235,10 +236,12 @@ int main(int argc, const char *argv[]) {
         if (!config->infbase.empty()) {
             if (annotator.get()) {
                 result_timer.reset();
-                precise_annotator->load(config->infbase + ".precise.dbg");
+                wt_annotator->load(config->infbase + ".wtr.dbg");
+                //precise_annotator->load(config->infbase + ".precise.dbg");
                 precise_const_time += result_timer.elapsed();
             } else {
                 precise_annotator.reset();
+                wt_annotator.reset();
             }
         }
 
@@ -257,8 +260,12 @@ int main(int argc, const char *argv[]) {
 
         // iterate over input files
         for (unsigned int f = 0; f < files.size(); ++f) {
-            if (!annotator.get() && !precise_annotator.get())
+            if (!annotator.get() && !precise_annotator.get()) {
+            //if (!annotator.get() && !wt_annotator.get())
+                //break;
+            //if (!annotator.get() && (wt_annotator.get() || precise_annotator.get())) {
                 break;
+            }
             if (config->verbose) {
                 std::cout << std::endl << "Parsing " << files[f] << std::endl;
             }
@@ -309,7 +316,9 @@ int main(int argc, const char *argv[]) {
                             hashing_graph.add_sequence(variant.second, true);
                             graph_const_time += data_reading_timer.elapsed();
                             if (precise_annotator.get()) {
+                            //if (wt_annotator.get()) {
                                 data_reading_timer.reset();
+                                //wt_annotator->add_sequence(variant.second, variant.first, true);
                                 precise_annotator->add_sequence(variant.second, variant.first, true);
                                 precise_const_time += data_reading_timer.elapsed();
                             }
@@ -367,7 +376,9 @@ int main(int argc, const char *argv[]) {
                         }
 
                         if (annotation.empty() && precise_annotator.get() && config->infbase.empty()) {
+                        //if (annotation.empty() && wt_annotator.get() && config->infbase.empty()) {
                             result_timer.reset();
+                            //wt_annotator->add_sequence(read_stream->seq.s);
                             precise_annotator->add_sequence(read_stream->seq.s);
                             precise_const_time += result_timer.elapsed();
                         }
@@ -421,10 +432,18 @@ int main(int argc, const char *argv[]) {
             std::cout << "# colors\t" << precise_annotator->num_columns() << std::endl;
             std::cout << "# class indicators\t" << precise_annotator->num_prefix_columns() << std::endl;
         }
-        if (annotator.get() && precise_annotator.get() && config->bloom_test_num_kmers) {
+        //if (annotator.get() && precise_annotator.get() && config->bloom_test_num_kmers) {
+        if (annotator.get() && (wt_annotator.get() || precise_annotator.get()) && config->bloom_test_num_kmers) {
             //Check FPP
             std::cout << "Approximating FPP...\t" << std::flush;
             timer.reset();
+            /*
+            if (wt_annotator.get()) {
+                annotator->test_fp_all(*wt_annotator, config->bloom_test_num_kmers, has_vcf);
+            } else if (precise_annotator.get()) {
+                annotator->test_fp_all(*precise_annotator, config->bloom_test_num_kmers, has_vcf);
+            }
+            */
             annotator->test_fp_all(*precise_annotator, config->bloom_test_num_kmers, has_vcf);
             std::cout << timer.elapsed() << "sec" << std::endl;
         }
@@ -465,7 +484,7 @@ int main(int argc, const char *argv[]) {
                       << config->p << " threads" << std::endl;
         }
 
-        if (!config->outfbase.empty() && precise_annotator.get() && config->infbase.empty()) {
+        if (!config->outfbase.empty() && precise_annotator.get() && config->infbase.empty() && config->precise) {
             std::cout << "Serializing index set\t" << std::flush;
             timer.reset();
             //precise_annotator->export_rows(config->outfbase + ".anno.rawrows.dbg");
@@ -550,7 +569,7 @@ int main(int argc, const char *argv[]) {
 
         // iterate over input files
         for (size_t f = 0; f < files.size(); ++f) {
-            if (!annotator.get() && !precise_annotator.get())
+            if (!annotator.get() && !wt_annotator.get())
                 break;
 
             if (config->verbose)
@@ -602,9 +621,9 @@ int main(int argc, const char *argv[]) {
                         data_reading_timer.reset();
                         hashing_graph.add_sequence(variant.second, true);
                         graph_const_time += data_reading_timer.elapsed();
-                        if (precise_annotator.get()) {
+                        if (wt_annotator.get()) {
                             data_reading_timer.reset();
-                            precise_annotator->add_sequence(variant.second, variant.first, true);
+                            wt_annotator->add_sequence(variant.second, variant.first, true);
                             precise_const_time += data_reading_timer.elapsed();
                         }
 
@@ -667,14 +686,13 @@ int main(int argc, const char *argv[]) {
                         }
                     }
                     for (size_t _j = 0; _j < 2; ++_j) {
-
                         result_timer.reset();
                         hashing_graph.add_sequence(read_stream->seq.s);
                         graph_const_time += result_timer.elapsed();
 
-                        if (annotation.empty() && precise_annotator.get()) {
+                        if (annotation.empty() && wt_annotator.get()) {
                             result_timer.reset();
-                            precise_annotator->add_sequence(read_stream->seq.s);
+                            wt_annotator->add_sequence(read_stream->seq.s);
                             precise_const_time += result_timer.elapsed();
                         }
 
@@ -692,11 +710,13 @@ int main(int argc, const char *argv[]) {
                                         * (static_cast<size_t>(config->reverse) + 1));
                                 bloom_const_time += result_timer.elapsed();
                             }
-                            if (precise_annotator.get()) {
+                            if (wt_annotator.get()) {
                                 result_timer.reset();
-                                if (!_i && annotation.size() > 1)
-                                    precise_annotator->make_column_prefix(map_ins.first->second);
-                                precise_annotator->add_sequence(read_stream->seq.s, map_ins.first->second);
+                                if (!_i && annotation.size() > 1) {
+                                    //TODO
+                                    //precise_annotator->make_column_prefix(map_ins.first->second);
+                                }
+                                wt_annotator->add_sequence(read_stream->seq.s, map_ins.first->second);
                                 precise_const_time += result_timer.elapsed();
                             }
                         }
@@ -727,16 +747,18 @@ int main(int argc, const char *argv[]) {
         std::cout << "Graph construction\t" << graph_const_time << std::endl;
         if (annotator.get())
             std::cout << "Bloom filter\t" << bloom_const_time << std::endl;
+        /*
         if (precise_annotator.get()) {
             std::cout << "Index set\t" << precise_const_time << std::endl;
             std::cout << "# colors\t" << precise_annotator->num_columns() << std::endl;
             std::cout << "# class indicators\t" << precise_annotator->num_prefix_columns() << std::endl;
         }
-        if (annotator.get() && precise_annotator.get() && config->bloom_test_num_kmers) {
+        */
+        if (annotator.get() && wt_annotator.get() && config->bloom_test_num_kmers) {
             //Check FPP
             std::cout << "Approximating FPP...\t" << std::flush;
             timer.reset();
-            annotator->test_fp_all(*precise_annotator, config->bloom_test_num_kmers, has_vcf);
+            annotator->test_fp_all(*wt_annotator, config->bloom_test_num_kmers, has_vcf);
             std::cout << timer.elapsed() << "sec" << std::endl;
         }
         // output and cleanup
@@ -754,6 +776,12 @@ int main(int argc, const char *argv[]) {
         }
 
         if (config->wavelet_trie) {
+            std::cout << "Wavelet trie update time\t" << std::flush;
+            std::cout << precise_const_time << "sec" << std::endl;
+        }
+
+        if (!config->outfbase.empty() && config->wavelet_trie) {
+            /*
             std::cout << "Computing wavelet trie\t" << std::flush;
             timer.reset();
             if (precise_annotator.get()) {
@@ -770,11 +798,13 @@ int main(int argc, const char *argv[]) {
                 wt_annotator.reset(new annotate::WaveletTrieAnnotator(hashing_graph, config->p));
                 wt_annotator->load_from_precise_file(in, config->p);
             }
+            */
             std::cout << wt_annotator->serialize(config->outfbase + ".wtr.dbg")
                       << " bytes\t"
                       << timer.elapsed() << " s" << std::endl;
         }
 
+        /*
         if (!config->outfbase.empty() && precise_annotator.get()) {
             std::cout << "Serializing index set\t" << std::flush;
             timer.reset();
@@ -783,6 +813,7 @@ int main(int argc, const char *argv[]) {
                       << " bytes\t"
                       << timer.elapsed() << " s" << std::endl;
         }
+        */
 
         std::cout << "Annotation matrix size:\t"
                   << hashing_graph.get_num_edges()
@@ -874,6 +905,85 @@ int main(int argc, const char *argv[]) {
             std::cout << "Permutations: " << timer.elapsed() << "sec" << std::endl;
         }
 
+    } else if (config->identity == Config::QUERY) {
+        Timer timer;
+        DBGHash hashing_graph(0);
+        std::cout << config->infbase << "\n";
+        timer.reset();
+        if (config->wavelet_trie) {
+            wt_annotator.reset(new annotate::WaveletTrieAnnotator(hashing_graph, config->p));
+            if (!wt_annotator->load(config->infbase + ".wtr.dbg")) {
+                std::cerr << "Error: Can't load Wavelet Trie annotation from "
+                          << config->infbase + ".wtr.dbg" << std::endl;
+                exit(1);
+            }
+
+            if (config->verbose) {
+                std::cout << "Wavelet Trie loading: " << timer.elapsed() << "sec" << std::endl;
+            }
+            timer.reset();
+
+            for (size_t i = 0; i < std::min(static_cast<size_t>(1000000), wt_annotator->size()); ++i) {
+                wt_annotator->annotate_edge(i);
+            }
+
+        } else {
+            if (!hashing_graph.load(config->infbase + ".graph.dbg")) {
+                std::cerr << "Error: Graph loading failed for "
+                          << config->infbase + ".graph.dbg" << std::endl;
+                exit(1);
+            }
+            if (config->verbose) {
+                std::cout << "Graph loading: " << timer.elapsed() << "sec" << std::endl;
+            }
+            timer.reset();
+
+            /*
+            precise_annotator.reset(new hash_annotate::PreciseHashAnnotator(hashing_graph));
+            precise_annotator->load(config->infbase + ".precise.dbg");
+            if (config->verbose) {
+                std::cout << "Annotation loading: " << timer.elapsed() << "sec" << std::endl;
+            }
+            timer.reset();
+            */
+
+            annotator.reset(new hash_annotate::BloomAnnotator(hashing_graph, 0.5));
+            if (!annotator->load(config->infbase + ".anno.dbg")) {
+                std::cerr << "Error: Can't load Bloom filter annotation from "
+                          << config->infbase + ".anno.dbg" << std::endl;
+                exit(1);
+            }
+
+            if (config->verbose) {
+                std::cout << "Bloom filter loading: " << timer.elapsed() << "sec" << std::endl;
+            }
+            timer.reset();
+
+            for (auto i = hashing_graph.first_edge(); i <= hashing_graph.last_edge(); ++i) {
+                annotator->get_annotation_corrected(i, true, 0);
+            }
+        }
+
+        std::cout << "Query: " << timer.elapsed() << "sec" << std::endl;
+    } else if (config->identity == Config::STATS) {
+        DBGHash hashing_graph(0);
+        std::cout << config->infbase << "\n";
+        if (config->wavelet_trie) {
+            wt_annotator.reset(new annotate::WaveletTrieAnnotator(hashing_graph, config->p));
+            if (!wt_annotator->load(config->infbase + ".wtr.dbg")) {
+                std::cerr << "Error: Can't load Wavelet Trie annotation from "
+                          << config->infbase + ".wtr.dbg" << std::endl;
+                exit(1);
+            }
+            auto stats = wt_annotator->stats();
+            std::cout << "Annotation matrix size\t"
+                      << std::get<0>(stats) << " x " << std::get<1>(stats) << std::endl;
+            std::cout << "# set bits\t"
+                      << std::get<2>(stats) << "\t"
+                      << static_cast<double>(std::get<2>(stats) * 100) / (std::get<0>(stats) * std::get<1>(stats)) << " %" << std::endl;
+            std::cout << "# unique edge colorings\t"
+                      << std::get<3>(stats) << std::endl;
+        }
     } else {
         std::cerr << "Error: Only BUILD, MAP, and PERMUTATION modes are currently supported" << std::endl;
         exit(1);
