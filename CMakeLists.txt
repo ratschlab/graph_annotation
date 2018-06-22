@@ -9,7 +9,7 @@ endif()
 
 string(APPEND CMAKE_CXX_FLAGS " \
   -std=c++14 -Wall -Wextra -Werror \
-  -msse4.2 -mavx -mavx2 -mbmi -mbmi2 \
+  -msse4.2 -mavx -mavx2 -mbmi -mbmi2 -g \
   -fopenmp -D_THREAD_SAFE -pthread") # -DDBGDEBUG
 
 # Profile build type
@@ -18,7 +18,7 @@ set(CMAKE_EXE_LINKER_FLAGS_PROFILE "-pg -g")
 set(CMAKE_SHARED_LINKER_FLAGS_PROFILE "-pg -g")
 
 # Debug build type
-set(CMAKE_CXX_FLAGS_DEBUG "-O3 -g")
+set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g")
 
 set(CMAKE_VERBOSE_MAKEFILE 1)
 cmake_policy(SET CMP0015 NEW)
@@ -59,9 +59,9 @@ if(BUILD_STATIC)
   set(METALIBS ${METALIBS} -lcurl)
 endif()
 
-target_include_directories(
-  annographlibs PUBLIC wavelet_trie/external-libraries/sdsl-lite/include
-)
+#target_include_directories(
+#  annographlibs PUBLIC
+#)
 
 target_link_libraries(
   annographlibs bloom_annotator wtr_libs ${METALIBS}
