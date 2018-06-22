@@ -19,12 +19,6 @@
 KSEQ_INIT(gzFile, gzread);
 
 
-const std::vector<std::string> annots = {
-  "AC_AFR", "AC_EAS", "AC_AMR", "AC_ASJ",
-  "AC_FIN", "AC_NFE", "AC_SAS", "AC_OTH"
-};
-
-
 template <class Graph, class Map>
 void annotate_kmers(const std::vector<std::string> &kmers, const Graph &graph,
                                                            const Map &get_coloring) {
@@ -95,6 +89,79 @@ std::vector<size_t> wavelet_trie_test_permutations(
         std::cout << sizes.back() << "\n";
     }
     return sizes;
+}
+
+template <class Callback>
+void read_vcf_file_critical(const std::string &filename,
+                            const std::string &ref_filename,
+                            size_t k,
+                            std::vector<std::string> *annotation,
+                            Callback callback, Timer *timer = NULL) {
+
+    //TODO: make this a configurable option
+    //default list of tokens to extract as annotations
+    //TODO: extract these guys directly from vcf parsed
+    const std::vector<std::string> annots = {
+      "AC_AFR", "AC_EAS", "AC_AMR", "AC_ASJ",
+      "AC_FIN", "AC_NFE", "AC_SAS", "AC_OTH"
+    };
+
+    vcf_parser vcf;
+    if (!vcf.init(ref_filename, filename, k)) {
+        std::cerr << "ERROR reading VCF " << filename << std::endl;
+        exit(1);
+    }
+    if (timer) {
+        std::cout << "Extracting sequences from file " << filename << std::endl;
+    }
+    size_t seq_count = 0;
+    while (vcf.get_seq(annots, annotation)) {
+        callback(vcf.seq, annotation);
+        seq_count++;
+    }
+    if (timer) {
+        std::cout << "Finished extracting sequences from file " << filename
+                  << " in " << timer->elapsed() << "sec"
+                  << ", sequences extracted: " << seq_count << std::endl;
+    }
+}
+
+template <class Callback>
+void read_fasta_file_critical(const std::string &filename,
+                              Callback callback,
+                              bool with_reverse = false,
+                              Timer *timer = NULL) {
+    size_t seq_count = 0;
+
+    gzFile input_p = gzopen(filename.c_str(), "r");
+    if (input_p == Z_NULL) {
+        std::cerr << "ERROR no such file " << filename << std::endl;
+        exit(1);
+    }
+    //TODO: handle read_stream->qual
+    kseq_t *read_stream = kseq_init(input_p);
+    if (read_stream == NULL) {
+        std::cerr << "ERROR while opening input file " << filename << std::endl;
+        exit(1);
+    }
+    if (timer) {
+        std::cout << "Start extracting sequences from file " << filename << std::endl;
+    }
+    while (kseq_read(read_stream) >= 0) {
+        callback(read_stream);
+        if (with_reverse) {
+            reverse_complement(read_stream->seq);
+            callback(read_stream);
+        }
+        seq_count++;
+    }
+    if (timer) {
+        std::cout << "Finished extracting sequences from file " << filename
+                  << " in " << timer->elapsed() << "sec"
+                  << ", sequences extracted: " << seq_count << std::endl;
+    }
+    kseq_destroy(read_stream);
+    gzclose(input_p);
 }
 
 int main(int argc, const char *argv[]) {
@@ -190,37 +257,40 @@ int main(int argc, const char *argv[]) {
                 has_vcf = true;
                 //READ FROM VCF
                 Timer data_reading_timer;
-
-                vcf_parser vcf;
-                if (!vcf.init(config->refpath, files[f], hashing_graph.get_k())) {
-                    std::cerr << "ERROR reading VCF " << files[f] << std::endl;
-                    exit(1);
-                }
-                std::cout << "Reading VCF" << std::endl;
-                std::string sequence;
                 std::vector<std::string> annotation;
                 std::map<size_t, std::string> variants;
-                data_reading_timer.reset();
-                for (size_t i = 1; vcf.get_seq(annots, &sequence, annotation); ++i) {
-                    //doesn't cover the no annot case
-                    size_t cursize = annot_map.size();
-                    for (size_t _i = 0; _i < annotation.size(); ++_i) {
-                    //for (auto &annot : annotation) {
-                        auto insert_annot_map = annot_map.emplace(annotation[_i], cursize);
-                        if (insert_annot_map.second) {
-                            cursize++;
+
+                read_vcf_file_critical(files[f],
+                                       config->refpath,
+                                       hashing_graph.get_k(),
+                                       &annotation,
+                    [&](std::string &seq, std::vector<std::string> *annotation) {
+                        //doesn't cover the no annot case
+                        size_t cursize = annot_map.size();
+                        for (size_t _i = 0; _i < annotation->size(); ++_i) {
+                            auto insert_annot_map = annot_map.emplace(
+                                    annotation->operator[](_i),
+                                    cursize);
+                            if (insert_annot_map.second) {
+                                cursize++;
+                            }
+                            if (!_i
+                                && precise_annotator.get()
+                                //&& wt_annotator.get()
+                                && config->infbase.empty()) {
+                                precise_annotator->make_column_prefix(
+                                        insert_annot_map.first->second);
+                            }
+                            auto insert_annot = variants.emplace(
+                                    insert_annot_map.first->second,
+                                    seq);
+                            if (!insert_annot.second) {
+                                insert_annot.first->second += std::string("$") + seq;
+                            }
                         }
-                        if (!_i && precise_annotator.get() && config->infbase.empty()) {
-                            // assume first annotation is the reference
-                            precise_annotator->make_column_prefix(insert_annot_map.first->second);
-                        }
-                        auto insert_annot = variants.emplace(insert_annot_map.first->second, sequence);
-                        if (!insert_annot.second) {
-                            insert_annot.first->second += std::string("$") + sequence;
-                        }
-                    }
-                    annotation.clear();
-                }
+                        annotation->clear();
+                    }, config->verbose ? &data_reading_timer : NULL);
+
                 file_read_time += data_reading_timer.elapsed();
                 for (auto &variant : variants) {
                     for (size_t j = 0; j < 2; ++j) {
@@ -250,20 +320,6 @@ int main(int argc, const char *argv[]) {
                 }
             } else if (utils::get_filetype(files[f]) == "FASTA"
                         || utils::get_filetype(files[f]) == "FASTQ") {
-                // open stream
-                gzFile input_p = gzopen(files[f].c_str(), "r");
-                if (input_p == Z_NULL) {
-                    std::cerr << "ERROR no such file " << files[f] << std::endl;
-                    exit(1);
-                }
-
-                //TODO: handle read_stream->qual
-                kseq_t *read_stream = kseq_init(input_p);
-                if (read_stream == NULL) {
-                    std::cerr << "ERROR while opening input file "
-                              << files[f] << std::endl;
-                    exit(1);
-                }
                 result_timer.reset();
                 bool fastq = utils::get_filetype(files[f]) == "FASTQ";
                 std::pair<std::unordered_map<std::string, size_t>::iterator, bool> map_ins;
@@ -275,21 +331,24 @@ int main(int argc, const char *argv[]) {
                     annotation.push_back(files[f]);
                 }
 
-                while (kseq_read(read_stream) >= 0) {
-                    file_read_time += result_timer.elapsed();
-                    if (!fastq) {
-                        annotation.clear();
-                        char *sep = NULL;
-                        if (!config->fasta_header_delimiter.empty())
-                            sep = strchr(read_stream->name.s, config->fasta_header_delimiter[0]);
-                        if (sep) {
-                            annotation.emplace_back(sep);
-                            annotation.emplace_back(std::string(read_stream->name.s, sep));
-                        } else {
-                            annotation.emplace_back(read_stream->name.s);
+                read_fasta_file_critical(files[f],
+                    [&](kseq_t *read_stream) {
+                        file_read_time += result_timer.elapsed();
+                        if (!fastq) {
+                            if (config->verbose) {
+                                std::cout << "Parsing " << read_stream->name.s << "\n";
+                            }
+                            annotation.clear();
+                            char *sep = NULL;
+                            if (!config->fasta_header_delimiter.empty())
+                                sep = strchr(read_stream->name.s, config->fasta_header_delimiter[0]);
+                            if (sep) {
+                                annotation.emplace_back(sep);
+                                annotation.emplace_back(std::string(read_stream->name.s, sep));
+                            } else {
+                                annotation.emplace_back(read_stream->name.s);
+                            }
                         }
-                    }
-                    for (size_t _j = 0; _j < 2; ++_j) {
 
                         if (config->infbase.empty()) {
                             result_timer.reset();
@@ -305,7 +364,6 @@ int main(int argc, const char *argv[]) {
 
                         assert(annotation.size() <= 2);
                         for (size_t _i = 0; _i < annotation.size(); ++_i) {
-                        //for (auto &annot : annotation) {
                             if (!fastq) {
                                 size_t cursize = annot_map.size();
                                 map_ins = annot_map.emplace(annotation[_i], cursize);
@@ -318,23 +376,20 @@ int main(int argc, const char *argv[]) {
                                 bloom_const_time += result_timer.elapsed();
                             }
                             if (precise_annotator.get() && config->infbase.empty()) {
+                            //if (wt_annotator.get() && config->infbase.empty()) {
                                 result_timer.reset();
-                                if (!_i && annotation.size() > 1)
+                                if (!_i && annotation.size() > 1) {
                                     precise_annotator->make_column_prefix(map_ins.first->second);
+                                }
+                                //wt_annotator->add_sequence(read_stream->seq.s, map_ins.first->second);
                                 precise_annotator->add_sequence(read_stream->seq.s, map_ins.first->second);
                                 precise_const_time += result_timer.elapsed();
                             }
                         }
-
-                        if (config->reverse)
-                            reverse_complement(read_stream->seq);
-                        else
-                            break;
-                    }
-                    result_timer.reset();
-                }
-                kseq_destroy(read_stream);
-                gzclose(input_p);
+                        result_timer.reset();
+                    },
+                    config->reverse,
+                    &result_timer);
             } else {
                 std::cerr << "ERROR: Filetype unknown for file "
                           << files[f] << std::endl;
@@ -496,36 +551,40 @@ int main(int argc, const char *argv[]) {
                 //READ FROM VCF
                 Timer data_reading_timer;
 
-                vcf_parser vcf;
-                if (!vcf.init(config->refpath, files[f], hashing_graph.get_k())) {
-                    std::cerr << "ERROR reading VCF " << files[f] << std::endl;
-                    exit(1);
-                }
-                std::cout << "Reading VCF" << std::endl;
-                std::string sequence;
                 std::vector<std::string> annotation;
                 std::map<size_t, std::string> variants;
-                data_reading_timer.reset();
-                for (size_t i = 1; vcf.get_seq(annots, &sequence, annotation); ++i) {
-                    //doesn't cover the no annot case
-                    size_t cursize = annot_map.size();
-                    for (size_t _i = 0; _i < annotation.size(); ++_i) {
-                    //for (auto &annot : annotation) {
-                        auto insert_annot_map = annot_map.emplace(annotation[_i], cursize);
-                        if (insert_annot_map.second) {
-                            cursize++;
+
+                read_vcf_file_critical(files[f],
+                                       config->refpath,
+                                       hashing_graph.get_k(),
+                                       &annotation,
+                    [&](std::string &seq, std::vector<std::string> *annotation) {
+                        //doesn't cover the no annot case
+                        size_t cursize = annot_map.size();
+                        for (size_t _i = 0; _i < annotation->size(); ++_i) {
+                            auto insert_annot_map = annot_map.emplace(
+                                    annotation->operator[](_i),
+                                    cursize);
+                            if (insert_annot_map.second) {
+                                cursize++;
+                            }
+                            if (!_i
+                                && wt_annotator.get()
+                                && config->infbase.empty()) {
+                                //TODO
+                                //precise_annotator->make_column_prefix(
+                                //        insert_annot_map.first->second);
+                            }
+                            auto insert_annot = variants.emplace(
+                                    insert_annot_map.first->second,
+                                    seq);
+                            if (!insert_annot.second) {
+                                insert_annot.first->second += std::string("$") + seq;
+                            }
                         }
-                        if (!_i && precise_annotator.get()) {
-                            // assume first annotation is the reference
-                            precise_annotator->make_column_prefix(insert_annot_map.first->second);
-                        }
-                        auto insert_annot = variants.emplace(insert_annot_map.first->second, sequence);
-                        if (!insert_annot.second) {
-                            insert_annot.first->second += std::string("$") + sequence;
-                        }
-                    }
-                    annotation.clear();
-                }
+                        annotation->clear();
+                    }, config->verbose ? &data_reading_timer : NULL);
+
                 file_read_time += data_reading_timer.elapsed();
                 for (auto &variant : variants) {
                     for (size_t j = 0; j < 2; ++j) {
@@ -583,6 +642,9 @@ int main(int argc, const char *argv[]) {
                 while (kseq_read(read_stream) >= 0) {
                     file_read_time += result_timer.elapsed();
                     if (!fastq) {
+                        if (config->verbose) {
+                            std::cout << "Parsing " << read_stream->name.s << "\n";
+                        }
                         annotation.clear();
                         char *sep = NULL;
                         if (!config->fasta_header_delimiter.empty())
