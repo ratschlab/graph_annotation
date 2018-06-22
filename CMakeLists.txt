@@ -8,7 +8,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 string(APPEND CMAKE_CXX_FLAGS " \
-  -std=c++14 -Wall -Wextra -Werror \
+  -std=c++14 -Wall -Wextra -Werror -Wno-ignored-qualifiers \
   -msse4.2 -mavx -mavx2 -mbmi -mbmi2 -g \
   -fopenmp -D_THREAD_SAFE -pthread") # -DDBGDEBUG
 

@@ -26,8 +26,8 @@ typedef beta_t::rank_1_type rank1_t;
 class Prefix {
   public:
     Prefix() { }
-    Prefix(size_t col, bool allequal) : col(col), allequal(allequal) { }
-    size_t col = -1llu;
+    Prefix(pos_t col, bool allequal) : col(col), allequal(allequal) { }
+    pos_t col = static_cast<pos_t>(-1);
     bool allequal = true;
 };
 
@@ -62,25 +62,33 @@ class WaveletTrie {
     //destructor
     ~WaveletTrie() noexcept;
 
-    cpp_int at(size_t i, size_t j = -1llu) const;
+    cpp_int at(size_t i, pos_t j = static_cast<pos_t>(-1)) const;
 
-    void set_bit(size_t i, size_t j);
+    void set_bit(size_t i, pos_t j);
+    template <class Container>
+    void set_bits(Container &is, pos_t j);
 
-    void toggle_bit(size_t i, size_t j);
+    void toggle_bit(size_t i, pos_t j);
 
-    void unset_bit(size_t i, size_t j);
+    void unset_bit(size_t i, pos_t j);
 
     size_t size() const;
 
-    void insert(const WaveletTrie &wtr, size_t i = -1llu);
-    void insert(WaveletTrie&& wtr, size_t i = -1llu);
+    void insert(const WaveletTrie &wtr, size_t i = static_cast<size_t>(-1));
+    void insert(WaveletTrie&& wtr, size_t i = static_cast<size_t>(-1));
 
-    void remove(size_t j);
+    void remove(pos_t j);
+    void remove(const std::vector<pos_t> &js);
 
-    void print();
+    void swap(const std::vector<pos_t> &from,
+              const std::vector<pos_t> &to,
+              pos_t remove_after = static_cast<pos_t>(-1));
+    void move(const std::vector<pos_t> &from, const std::vector<pos_t> &to);
+
+    void print() const;
 
     template <typename T>
-    void insert(const T &a, size_t i = -1llu);
+    void insert(const T &a, size_t i = static_cast<size_t>(-1));
 
     size_t serialize(std::ostream &out) const;
     size_t load(std::istream &in);
@@ -92,11 +100,14 @@ class WaveletTrie {
 
     void set_p(size_t p) { p_ = p; }
 
+    std::pair<size_t, size_t> stats() const;
+
   private:
     Node* root = NULL;
     size_t p_; // number of threads
+    //utils::ThreadPool thread_queue_;
 
-    Node* traverse_down(Node *node, size_t &i, size_t &j);
+    Node* traverse_down(Node *node, size_t &i, pos_t &j);
 
 }; // WaveletTrie
 
@@ -127,8 +138,10 @@ class WaveletTrie::Node {
     //Node(const Iterator &row_begin, const Iterator &row_end,
     //        const size_t &col = 0, Prefix prefix = Prefix());
     template <class Iterator>
-    void fill_beta(const Iterator &row_begin, const Iterator &row_end,
-            const size_t &col, utils::ThreadPool &thread_queue, Prefix prefix = Prefix());
+    void fill_beta(
+            const Iterator &row_begin, const Iterator &row_end,
+            const pos_t &col,
+            utils::ThreadPool &thread_queue, Prefix prefix = Prefix());
 
     size_t serialize(std::ostream &out) const;
     size_t load(std::istream &in);
@@ -160,29 +173,31 @@ class WaveletTrie::Node {
     static void merge_(Node *curnode, Node *othnode, size_t i, utils::ThreadPool &thread_queue);
 
     template <class IndexContainer>
-    static size_t next_different_bit_(const IndexContainer &a, const IndexContainer &b,
-            size_t col = 0, size_t next_col = -1llu);
+    static pos_t next_different_bit_(const IndexContainer &a, const IndexContainer &b,
+            pos_t col = 0, pos_t next_col = static_cast<pos_t>(-1));
 
-    static size_t next_different_bit_alpha(const Node &curnode, const Node &othnode);
+    static pos_t next_different_bit_alpha(const Node &curnode, const Node &othnode);
 
     template <class Iterator>
     static Prefix longest_common_prefix(
-            const Iterator &row_begin, const Iterator &row_end, const size_t &col);
+            const Iterator &row_begin,
+            const Iterator &row_end,
+            const pos_t &col);
 
     //template <class Vector>
     //void set_beta_(const Vector &bv);
 
     template <class IndexContainer>
-    void set_alpha_(const IndexContainer &indices, size_t col, size_t col_end);
+    void set_alpha_(const IndexContainer &indices, pos_t col, pos_t col_end);
 
     template <class IndexContainer>
-    void set_alpha_(const IndexContainer &indices, size_t col);
+    void set_alpha_(const IndexContainer &indices, pos_t col);
 
     int move_label_down_(size_t length);
 
     static bool overlap_prefix_(Node &curnode, Node &othnode);
 
-    static void merge_beta_(Node &curnode, const Node &othnode, size_t i = -1llu);
+    static void merge_beta_(Node &curnode, const Node &othnode, size_t i = static_cast<size_t>(-1));
 
     void fill_ancestors(Node &othnode, bool ind, const size_t i);
 

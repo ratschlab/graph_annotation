@@ -7,7 +7,7 @@ const std::vector<size_t> num_threads = {1, 4};
 const std::vector<size_t> modes = {0, 1, 2, 3};
 
 
-std::vector<std::vector<std::vector<size_t>>> bits {
+std::vector<std::vector<std::vector<annotate::pos_t>>> bits {
     {}, // 0
     {   // 1
         {4},
@@ -127,7 +127,7 @@ std::vector<std::vector<std::vector<size_t>>> bits {
         {1, 3, 4},
         {0, 1, 2, 3, 5},
         {0, 1, 2, 3, 4, 6},
-        {1, 2, 3, 4, 4}
+        {1, 2, 3, 4, 5}
     },
     {
         // 22
@@ -139,17 +139,20 @@ std::vector<std::vector<std::vector<size_t>>> bits {
 };
 
 
-std::vector<annotate::cpp_int> generate_nums(std::vector<std::vector<size_t>> &bits) {
+std::vector<annotate::cpp_int> generate_nums(std::vector<std::vector<annotate::pos_t>> &bits) {
     std::vector<annotate::cpp_int> nums;
     nums.reserve(bits.size());
-    std::transform(bits.begin(), bits.end(), std::back_inserter(nums), annotate::pack_indices);
+    std::transform(bits.begin(),
+                   bits.end(),
+                   std::back_inserter(nums),
+                   annotate::pack_indices<const std::vector<annotate::pos_t>&>);
     assert(nums.size() == bits.size());
     return nums;
 }
 
-std::vector<std::vector<size_t>> generate_indices(std::vector<std::vector<size_t>> &bits, size_t seed = 42) {
+std::vector<std::vector<annotate::pos_t>> generate_indices(std::vector<std::vector<annotate::pos_t>> &bits, size_t seed = 42) {
     std::srand(seed);
-    std::vector<std::vector<size_t>> nums(bits.size());
+    std::vector<std::vector<annotate::pos_t>> nums(bits.size());
     for (size_t i = 0; i < nums.size(); ++i) {
         nums[i].insert(nums[i].end(), bits[i].begin(), bits[i].end());
         std::random_shuffle(nums[i].begin(), nums[i].end());
@@ -157,9 +160,9 @@ std::vector<std::vector<size_t>> generate_indices(std::vector<std::vector<size_t
     return nums;
 }
 
-std::vector<std::set<size_t>> generate_indices_set(std::vector<std::vector<size_t>> &bits, size_t seed = 42) {
+std::vector<std::set<annotate::pos_t>> generate_indices_set(std::vector<std::vector<annotate::pos_t>> &bits, size_t seed = 42) {
     std::srand(seed);
-    std::vector<std::set<size_t>> nums(bits.size());
+    std::vector<std::set<annotate::pos_t>> nums(bits.size());
     for (size_t i = 0; i < nums.size(); ++i) {
         nums[i].insert(bits[i].begin(), bits[i].end());
     }
@@ -460,7 +463,13 @@ annotate::WaveletTrie test_wtr_pairs_insert_copy(size_t i, size_t j, size_t p, s
 void check_wtr_vector(std::vector<annotate::WaveletTrie> &wtrs) {
     if (wtrs.size()) {
         for (auto it = wtrs.begin(); it + 1 != wtrs.end(); ++it) {
-            EXPECT_TRUE(*it == *(it + 1))
+            if (*it != *(it + 1)) {
+                it->print();
+                std::cout << "\n";
+                (it+1)->print();
+                std::cout << "\n";
+            }
+            ASSERT_EQ(*it, *(it + 1))
                 << "EQUAL FAIL: " << std::distance(wtrs.begin(), it);
         }
     }
@@ -480,6 +489,38 @@ void dump_wtrs(std::vector<annotate::WaveletTrie> &wtrs) {
 }
 
 TEST(WaveletTrie, TestSingle) {
+    std::vector<annotate::WaveletTrie> wtrs;
+    for (size_t i = 0; i < bits.size(); ++i) {
+        wtrs.clear();
+        for (auto p : num_threads) {
+            for (auto m : modes) {
+                wtrs.push_back(test_wtr(i, p, m));
+                wtrs.push_back(test_wtr_copy(i, p, m));
+            }
+        }
+        dump_wtrs(wtrs);
+        check_wtr_vector(wtrs);
+    }
+}
+
+TEST(WaveletTrie, TestSingleStats) {
+    for (size_t i = 0; i < bits.size(); ++i) {
+        auto wtr = test_wtr(i, 1, 0);
+        auto stats = wtr.stats();
+        auto nums = generate_nums(bits[i]);
+        auto nums_set = std::set<annotate::cpp_int>(nums.begin(), nums.end());
+        ASSERT_EQ(nums_set.size(), stats.first) << i;
+
+        size_t popcount = 0;
+        for (auto &a : bits[i]) {
+            popcount += a.size();
+        }
+        ASSERT_EQ(popcount, stats.second) << i;
+
+    }
+}
+
+TEST(WaveletTrie, TestSingleStep) {
     std::vector<annotate::WaveletTrie> wtrs;
     for (size_t i = 0; i < bits.size(); ++i) {
         wtrs.clear();
@@ -517,7 +558,7 @@ TEST(WaveletTrie, TestPairs) {
 
 TEST(WaveletTrie, TestSetUnsetToggleBit) {
     std::vector<annotate::WaveletTrie> wtrs;
-    size_t max_elem = 0;
+    annotate::pos_t max_elem = 0;
     for (auto bit_v : bits) {
         for (auto n : bit_v) {
             if (n.size()) {
@@ -584,7 +625,6 @@ TEST(WaveletTrie, TestDelete) {
     for (size_t _i = 0; _i < bits.size(); ++_i) {
         auto nums = generate_nums(bits[_i]);
         for (size_t i = 0; i < nums.size(); ++i) {
-            //std::cout << "test:\t" << std::dec << _i << "\t" << i << "\n";
             std::vector<annotate::cpp_int> nums_c;
             nums_c.reserve(nums.size());
             nums_c.insert(nums_c.end(), nums.begin(), nums.end());
@@ -622,6 +662,39 @@ TEST(WaveletTrie, TestDelete) {
     }
 }
 
+TEST(WaveletTrie, SetBits) {
+    for (size_t i = 0; i < bits.size(); ++i) {
+        for (size_t j = 0; j < bits.size(); ++j) {
+            for (size_t k = 0; k <= bits[i].size(); ++k) {
+                std::vector<annotate::WaveletTrie> wtrs;
+                //if (i != 1 || j != 1 || k != 2)
+                //    continue;
+                //std::cout << i << " " << j << " " << k << " " << bits[j].size() << "\n";
+                for (auto p : num_threads) {
+                    wtrs.push_back(test_wtr_pairs_insert(i, j, p, k));
+                    wtrs.push_back(test_wtr(i, p, 0));
+
+                    std::map<size_t, std::set<annotate::pos_t>> edges;
+                    for (size_t edge_index = 0; edge_index < bits[j].size(); ++edge_index) {
+                        for (auto &col : bits[j][edge_index]) {
+                            edges[col].insert(edge_index + k);
+                        }
+                    }
+                    std::vector<annotate::cpp_int> blank(bits[j].size());
+                    wtrs.back().insert(annotate::WaveletTrie(blank), k);
+                    for (auto &edge : edges) {
+                        //std::cout << edge.first << " " << edge.second.size() << "\n";
+                        wtrs.back().set_bits(edge.second, edge.first);
+                        //wtrs.back().print();
+                        //std::cout << "\n";
+                    }
+                }
+                check_wtr_vector(wtrs);
+            }
+        }
+    }
+}
+
 TEST(WaveletTrie, TestPairsInsertDelete) {
     std::vector<annotate::WaveletTrie> wtrs;
     for (size_t i = 0; i < bits.size(); ++i) {
@@ -637,6 +710,10 @@ TEST(WaveletTrie, TestPairsInsertDelete) {
                     for (size_t l = 0; l < bits[j].size(); ++l) {
                         wtrs_ref.back().remove(k);
                     }
+                    wtrs_ref.push_back(test_wtr_pairs_insert_copy(i, j, p, k));
+                    std::vector<annotate::pos_t> indices(bits[j].size());
+                    std::iota(indices.begin(), indices.end(), k);
+                    wtrs_ref.back().remove(std::move(indices));
                 }
                 dump_wtrs(wtrs);
                 check_wtr_vector(wtrs);

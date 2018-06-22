@@ -4,6 +4,7 @@
 #include "hashers.hpp"
 
 #include <map>
+#include <unordered_map>
 
 
 namespace hash_annotate {
@@ -60,7 +61,7 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     PreciseHashAnnotator(const DeBruijnGraphWrapper &graph) : graph_(graph) {}
 
     void add_sequence(const std::string &sequence,
-                      size_t column = static_cast<size_t>(-1),
+                      pos_t column = static_cast<pos_t>(-1),
                       bool rooted = false);
 
     void add_column(const std::string &sequence, bool rooted = false);
@@ -71,7 +72,7 @@ class PreciseHashAnnotator : public PreciseAnnotator {
     std::vector<uint64_t> annotate_edge(DeBruijnGraphWrapper::edge_index i,
                                         bool permute = false) const;
 
-    std::set<size_t> annotate_edge_indices(DeBruijnGraphWrapper::edge_index i,
+    std::set<pos_t> annotate_edge_indices(DeBruijnGraphWrapper::edge_index i,
                                            bool permute = false) const;
 
     std::string get_kmer(DeBruijnGraphWrapper::edge_index i) const;
@@ -84,9 +85,9 @@ class PreciseHashAnnotator : public PreciseAnnotator {
 
     void clear_prefix() { prefix_indices_.clear(); }
 
-    std::set<size_t> get_prefix() const { return prefix_indices_; }
+    std::set<pos_t> get_prefix() const { return prefix_indices_; }
 
-    void make_column_prefix(size_t i) { prefix_indices_.insert(i); }
+    void make_column_prefix(pos_t i) { prefix_indices_.insert(i); }
 
     template <class Iterator>
     void make_columns_prefix(const Iterator &begin, const Iterator &end) {
@@ -102,14 +103,14 @@ class PreciseHashAnnotator : public PreciseAnnotator {
 
     size_t size() const { return annotation_exact.get_num_edges(); }
 
-    std::map<size_t, size_t> compute_permutation_map() const;
+    std::unordered_map<size_t, size_t> compute_permutation_map() const;
 
-    static std::map<size_t, size_t>
+    static std::unordered_map<size_t, size_t>
     compute_permutation_map(size_t num_columns,
-                            const std::set<size_t> &prefix_indices);
+                            const std::set<pos_t> &prefix_indices);
 
     std::vector<uint64_t> permute_indices(const std::vector<uint64_t> &a,
-                                          const std::map<size_t, size_t> &index_map) const;
+                                          const std::unordered_map<size_t, size_t> &index_map) const;
 
     bool operator==(const PreciseHashAnnotator &that) const {
         return (annotation_exact == that.annotation_exact)
@@ -123,7 +124,7 @@ class PreciseHashAnnotator : public PreciseAnnotator {
 
   private:
     ExactHashAnnotation annotation_exact;
-    std::set<size_t> prefix_indices_;
+    std::set<pos_t> prefix_indices_;
 };
 
 class BloomAnnotator {

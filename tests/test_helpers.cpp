@@ -6,10 +6,12 @@
 const std::string test_data_dir = "../tests/data";
 const std::string test_dump_basename = test_data_dir + "/dump_test";
 
+const size_t MAX_INT = static_cast<size_t>(-1);
+
 annotate::cpp_int generate_number() {
-    annotate::cpp_int l_int = -1llu - 1;
+    annotate::cpp_int l_int = MAX_INT - 1;
     l_int <<= 64;
-    l_int += -1llu - 1;
+    l_int += MAX_INT - 1;
     return l_int;
 }
 
@@ -29,8 +31,8 @@ TEST(CPPINT, Serialization) {
 
 TEST(SDSL, RemoveRange) {
     annotate::bv_t bv(128);
-    for (size_t _i = 0; _i < -1llu - -1llu / 10; _i += -1llu / 10) {
-        for (size_t _j = 0; _j < -1llu - -1llu / 10; _j += -1llu / 10) {
+    for (size_t _i = 0; _i < MAX_INT - MAX_INT / 10; _i += MAX_INT / 10) {
+        for (size_t _j = 0; _j < MAX_INT - MAX_INT / 10; _j += MAX_INT / 10) {
             bv.set_int(0, _i);
             bv.set_int(64, _j);
             for (size_t i = 0; i < 128; ++i) {
@@ -63,12 +65,22 @@ TEST(SDSL, RemoveRange) {
                     bvc.set_int(0, bv.get_int(0));
                     bvc.set_int(64, bv.get_int(64));
                     ASSERT_EQ(bv, bvc);
-                    annotate::bv_t bvd = annotate::remove_range(annotate::beta_t(bvc), i, i + j);
+                    annotate::bv_t bvd = annotate::remove_range(annotate::rrr_t(bvc), i, i + j);
                     ASSERT_EQ(bvv, bvd) << i << "\t" << j;
                 }
             }
         }
     }
+}
+
+TEST(SDSL, Remove) {
+    annotate::bv_t bv(128);
+    bv.set_int(0, MAX_INT - 2);
+    bv.set_int(64, MAX_INT - 2);
+    bv = annotate::remove_bits(bv, std::vector<annotate::pos_t>{0, 64});
+    ASSERT_EQ(126u, bv.size());
+    ASSERT_EQ(62, __builtin_popcountll(bv.get_int(0)));
+    ASSERT_EQ(63, __builtin_popcountll(bv.get_int(62)));
 }
 
 TEST(SDSL, InsertZeros) {

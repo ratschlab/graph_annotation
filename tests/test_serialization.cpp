@@ -28,7 +28,7 @@ TEST(Serialization, String) {
 }
 
 TEST(Serialization, Mixed) {
-    uint64_t test_num = -2llu;
+    uint64_t test_num = static_cast<size_t>(-2);
     std::string test_string("test_string");
 
     std::ofstream out(test_dump_basename + "_testser");
@@ -69,10 +69,10 @@ TEST(Serialization, Zero) {
         ASSERT_EQ(num, serialization::loadNumber(in));
     }
     std::ofstream out(test_dump_basename + "_serial");
-    serialization::serializeNumber(out, -1llu);
+    serialization::serializeNumber(out, static_cast<size_t>(-1));
     out.close();
 
     std::ifstream in(test_dump_basename + "_serial");
-    ASSERT_EQ(-1llu, serialization::loadNumber(in));
+    ASSERT_EQ(static_cast<size_t>(-1), serialization::loadNumber(in));
 }
 

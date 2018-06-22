@@ -77,18 +77,22 @@ std::vector<size_t> wavelet_trie_test_permutations(
         std::vector<size_t> indices(precise.num_columns());
         std::iota(indices.begin(), indices.end(), 0);
         std::random_shuffle(indices.begin(), indices.end());
-        std::map<size_t, size_t> permut_map;
-        for (size_t i = 0; i < indices.size(); ++i)
+        std::unordered_map<size_t, size_t> permut_map;
+        for (size_t i = 0; i < indices.size(); ++i) {
             permut_map.emplace(i, indices[i]);
-        thread_pool.enqueue([&precise,&graph,&sizes](size_t num_perm, std::map<size_t, size_t> permut_map) {
-            std::ostringstream sout;
-            annotate::WaveletTrieAnnotator wtr(
-                        precise,
-                        graph,
-                        1,
-                        std::move(permut_map));
-            sizes[num_perm] = wtr.serialize(sout);
-        }, _i, std::move(permut_map));
+        }
+        thread_pool.enqueue(
+            [&precise, &graph, &sizes](size_t num_perm,
+                                       std::unordered_map<size_t, size_t> permut_map) {
+                std::ostringstream sout;
+                annotate::WaveletTrieAnnotator wtr(
+                            precise,
+                            graph,
+                            1,
+                            std::move(permut_map));
+                sizes[num_perm] = wtr.serialize(sout);
+            },
+        _i, std::move(permut_map));
     }
     thread_pool.join();
     for (auto &size : sizes) {

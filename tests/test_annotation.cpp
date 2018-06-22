@@ -297,15 +297,40 @@ TEST(Annotate, WaveletTrie) {
 
         DBGHash graph(k);
         hash_annotate::PreciseHashAnnotator precise(graph);
+        annotate::WaveletTrieAnnotator wts_ext(graph, 2);
 
         for (size_t i = 0; i < num_seqs; ++i) {
             graph.add_sequence(sequences[i]);
             precise.add_sequence(sequences[i], i);
+            wts_ext.add_sequence(sequences[i], i);
+            annotate::WaveletTrieAnnotator wts_pre(precise, graph);
+            if (wts_pre != wts_ext) {
+                wts_pre.print();
+                std::cout << "\n";
+                wts_ext.print();
+                std::cout << "\n";
+            }
+            ASSERT_EQ(wts_pre, wts_ext) << i;
+            /*
+            for (size_t j = 0; j < wts_ext.size(); ++j) {
+                if (!hash_annotate::equal(precise.annotate_edge(j, true),wts_ext.annotate_edge(j, true))) {
+                    wts_ext.print();
+                    std::cout << "\n";
+                    annotate::WaveletTrieAnnotator wts_pr(precise, graph);
+                    wts_pr.print();
+                    std::cout << "\n";
+                }
+                ASSERT_TRUE(hash_annotate::equal(
+                            precise.annotate_edge(j, true),
+                            wts_ext.annotate_edge(j, true))) << i << "\t" << j;
+            }
+            */
         }
 
         ASSERT_EQ(graph.get_num_edges(), precise.size());
+        ASSERT_EQ(graph.get_num_edges(), wts_ext.size());
 
-        std::vector<annotate::WaveletTrieAnnotator> wtrs;
+        std::vector<annotate::WaveletTrieAnnotator> wtrs{std::move(wts_ext)};
 
         for (auto p : num_threads) {
             //std::cout << "Checking normal" << std::endl;
@@ -395,6 +420,12 @@ TEST(Annotate, WaveletTrie) {
 
         //std::cout << "Checking equality" << std::endl;
         for (size_t i = 1; i < wtrs.size(); ++i) {
+            if (wtrs[i - 1] != wtrs[i]) {
+                wtrs[i - 1].print();
+                std::cout << "\n";
+                wtrs[i].print();
+                std::cout << "\n";
+            }
             ASSERT_EQ(wtrs[i - 1], wtrs[i]) << i;
         }
     }
