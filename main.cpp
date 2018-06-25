@@ -484,7 +484,7 @@ int main(int argc, const char *argv[]) {
                       << config->p << " threads" << std::endl;
         }
 
-        if (!config->outfbase.empty() && precise_annotator.get() && config->infbase.empty() && config->precise) {
+        if (!config->outfbase.empty() && precise_annotator.get() && config->infbase.empty()) {
             std::cout << "Serializing index set\t" << std::flush;
             timer.reset();
             //precise_annotator->export_rows(config->outfbase + ".anno.rawrows.dbg");

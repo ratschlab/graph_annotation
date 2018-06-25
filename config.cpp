@@ -45,8 +45,6 @@ Config::Config(int argc, const char *argv[]) {
             p = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "--wavelet-trie")) {
             wavelet_trie = true;
-        } else if (!strcmp(argv[i], "--serialize-index-set")) {
-            precise = true;
         } else if (!strcmp(argv[i], "--bloom-false-pos-prob")) {
             bloom_fpp = std::stof(argv[++i]);
         } else if (!strcmp(argv[i], "--bloom-bits-per-edge")) {
@@ -145,7 +143,6 @@ void Config::print_usage(const std::string &prog_name, IdentityType identity) {
             fprintf(stderr, "\t-k --kmer-length [INT] \t\t\tlength of the k-mer to use [3]\n");
             fprintf(stderr, "\t-p --parallel [INT] \t\t\tnumber of threads to use for wavelet trie compression [1]\n");
             fprintf(stderr, "\t   --wavelet-trie \t\t\tconstruct wavelet trie [off]\n");
-            fprintf(stderr, "\t   --serialize-index-set \t\t\tserialize uncompressed index set to disk [off]\n");
             fprintf(stderr, "\t   --bloom-false-pos-prob [FLOAT] \tFalse positive probability in bloom filter [-1]\n");
             fprintf(stderr, "\t   --bloom-bits-per-edge [FLOAT] \tBits per edge used in bloom filter annotator [0.4]\n");
             fprintf(stderr, "\t   --bloom-hash-functions [INT] \tNumber of hash functions used in bloom filter [off]\n");
