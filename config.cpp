@@ -22,6 +22,8 @@ Config::Config(int argc, const char *argv[]) {
         identity = PERMUTATION;
     } else if (!strcmp(argv[1], "stats")) {
         identity = STATS;
+    } else if (!strcmp(argv[1], "compress")) {
+        identity = COMPRESS;
     } else if (!strcmp(argv[1], "query")) {
         identity = QUERY;
     }
@@ -180,8 +182,27 @@ void Config::print_usage(const std::string &prog_name, IdentityType identity) {
             fprintf(stderr, "\t-i --infile-base [STR] \tinput colored graph basename\n");
         } break;
         case QUERY: {
+            fprintf(stderr, "Usage: %s query [options] -i <graph_basename>\n\n", prog_name.c_str());
+            
+            fprintf(stderr, "Available options for query:\n");
+            fprintf(stderr, "\t-i --infile-base [STR] \tinput colored graph basename\n");
+            fprintf(stderr, "\t   --wavelet-trie \tuse wavelet trie for annotation [off]\n"
+                            "\t                  \t                         default: Bloom filter\n");
         } break;
         case STATS: {
+            fprintf(stderr, "Usage: %s stats [options] -i <graph_basename>\n\n", prog_name.c_str());
+            
+            fprintf(stderr, "Available options for stats:\n");
+            fprintf(stderr, "\t-i --infile-base [STR] \tinput colored graph basename\n");
+            fprintf(stderr, "\t   --wavelet-trie \tuse wavelet trie for annotation [off]\n"
+                            "\t                  \t                         default: Bloom filter\n");
+        } break;
+        case COMPRESS: {
+            fprintf(stderr, "Usage: %s compress [options] -i <graph_basename>\n\n", prog_name.c_str());
+            
+            fprintf(stderr, "Available options for compress:\n");
+            fprintf(stderr, "\t-i --infile-base [STR] \tinput colored graph basename\n");
+            fprintf(stderr, "\t-p --parallel [INT] \t\tnumber of threads (one permutation per thread) [1]\n");
         } break;
     }
 

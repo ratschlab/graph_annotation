@@ -23,9 +23,9 @@ Build types: `cmake .. <arguments>` where arguments are:
 1. Generate graph and uncompressed annotations (`.precise.dbg` and optionally `.wtr.dbg` files)  
 `./annograph build -o <OUTPREFIX> <FLAGS> <INPUTS>`
 2. Compress annotation with Bloom filters  
-`./annograph build -i <OUTPREFIXX> -o <BLOOMOUTPREFIX> <FLAGS> <INPUTS>`
+`./annograph build -i <OUTPREFIX> -o <BLOOMOUTPREFIX> <FLAGS> <INPUTS>`
 3. Compress annotation with wavelet tries (if not done in step 1)  
-`./annograph build -i <OUTPREFIXX> -o <WTROUTPREFIX> --wavelet-trie <FLAGS> <INPUTS>`
+`./annograph build -i <OUTPREFIX> -o <WTROUTPREFIX> --wavelet-trie <FLAGS> <INPUTS>`
 
 #### Example
 ```
@@ -37,6 +37,19 @@ Build types: `cmake .. <arguments>` where arguments are:
 ./annograph build -i tiny_example --wavelet-trie -o tiny_example ../tests/data/test_vcfparse.fa
 ./annograph map --wavelet-trie -i tiny_example TCGCGCGCTA TCGCGCGCTA TCGCGCGCTC TCGCGCGCTN TCGCGCGCTANA TCGCGCGCTC
 ```
+
+#### Other use cases
+Constructing wavelet trie in blocks (slower, uses less RAM)
+`./annograph compress -i <OUTPREFIX> -o <WTROUTPREFIX>`
+
+Annotation compressor query time
+`./annograph query -i <OUTPREFIX>`
+
+Wavelet trie statistics
+`./annograph stats -i <OUTPREFIX> --wavelet-trie`
+
+Compress wavelet tries with random column permutations
+`./annograph permutation -i <OUTPREFIX> --num-permutations <NUM_PERMS>`
 
 ## bioRxiv preprint
 This code was used to produce the results in our bioRxiv preprint

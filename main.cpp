@@ -497,10 +497,12 @@ int main(int argc, const char *argv[]) {
                   << hashing_graph.get_num_edges()
                   << " x "
                   << (annotator.get()
-                            ? annotator->num_columns()
-                            : (wt_annotator.get()
-                                    ? wt_annotator->num_columns()
-                                    : 0))
+                      ? annotator->num_columns()
+                   : (precise_annotator.get()
+                      ? precise_annotator->num_columns()
+                   : (wt_annotator.get()
+                      ? wt_annotator->num_columns()
+                      : 0)))
                   << std::endl;
 
     } else if (config->identity == Config::UPDATE) {
@@ -819,10 +821,12 @@ int main(int argc, const char *argv[]) {
                   << hashing_graph.get_num_edges()
                   << " x "
                   << (annotator.get()
-                            ? annotator->num_columns()
-                            : (wt_annotator.get()
-                                    ? wt_annotator->num_columns()
-                                    : 0))
+                      ? annotator->num_columns()
+                   : (precise_annotator.get()
+                      ? precise_annotator->num_columns()
+                   : (wt_annotator.get()
+                      ? wt_annotator->num_columns()
+                      : 0)))
                   << std::endl;
 
     } else if (config->identity == Config::MAP) {
@@ -984,8 +988,39 @@ int main(int argc, const char *argv[]) {
             std::cout << "# unique edge colorings\t"
                       << std::get<3>(stats) << std::endl;
         }
+    } else if (config->identity == Config::COMPRESS) {
+        DBGHash hashing_graph(0);
+        Timer result_timer;
+        std::cout << "Loading graph file" << std::endl;
+        std::cout << config->infbase << std::endl;
+        hashing_graph.load(config->infbase + ".graph.dbg");
+        if (config->verbose) {
+            std::cout << "Loading uncompressed index set" << std::endl;
+        }
+
+        std::ifstream in(config->infbase + ".precise.dbg");
+        if (!in.good()) {
+            std::cerr << "ERROR: corrupt precise annotator. Please reconstruct it."
+                      << std::endl;
+            exit(1);
+        }
+        std::cout << "Computing wavelet trie\t" << std::flush;
+        wt_annotator.reset(new annotate::WaveletTrieAnnotator(hashing_graph, config->p));
+        result_timer.reset();
+        wt_annotator->load_from_precise_file(in, config->p);
+
+        std::cout << wt_annotator->serialize(config->outfbase + ".wtr.dbg")
+                  << " bytes\t"
+                  << result_timer.elapsed() << " s" << std::endl;
     } else {
-        std::cerr << "Error: Only BUILD, MAP, and PERMUTATION modes are currently supported" << std::endl;
+        std::cerr << "Error: Only \
+            BUILD, \
+            MAP, \
+            QUERY, \
+            STATS, \
+            COMPRESS, \
+            and \
+            PERMUTATION modes are currently supported" << std::endl;
         exit(1);
     }
     return 0;

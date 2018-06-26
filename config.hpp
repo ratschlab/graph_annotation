@@ -40,7 +40,8 @@ class Config {
         MAP,
         PERMUTATION,
         QUERY,
-        STATS
+        STATS,
+        COMPRESS
     };
     IdentityType identity = NO_IDENTITY;
 
