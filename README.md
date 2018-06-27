@@ -39,16 +39,16 @@ Build types: `cmake .. <arguments>` where arguments are:
 ```
 
 #### Other use cases
-Constructing wavelet trie in blocks (slower, uses less RAM)
+Constructing wavelet trie in blocks (slower, uses less RAM)  
 `./annograph compress -i <OUTPREFIX> -o <WTROUTPREFIX>`
 
-Annotation compressor query time
+Annotation compressor query time  
 `./annograph query -i <OUTPREFIX>`
 
-Wavelet trie statistics
+Wavelet trie statistics  
 `./annograph stats -i <OUTPREFIX> --wavelet-trie`
 
-Compress wavelet tries with random column permutations
+Compress wavelet tries with random column permutations  
 `./annograph permutation -i <OUTPREFIX> --num-permutations <NUM_PERMS>`
 
 ## bioRxiv preprint
