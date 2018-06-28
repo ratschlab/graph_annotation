@@ -1,7 +1,7 @@
 add_library(bloom_annotator STATIC
   dbg_bloom_annotator.cpp
   hashers.cpp
-  serialization.cpp
+  ../serialization.cpp
 )
 
 include_directories(

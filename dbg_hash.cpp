@@ -1,5 +1,5 @@
 #include "dbg_hash.hpp"
-#include "bloom_annotator/serialization.hpp"
+#include "serialization.hpp"
 
 const std::string kAlphabet = "ACGTN$";
 

@@ -1,10 +1,11 @@
 #include "dbg_bloom_annotator.hpp"
-#include "serialization.hpp"
 
 #include <fstream>
 #include <cmath>
 #include <map>
 #include <unordered_map>
+
+#include "../serialization.hpp"
 
 
 namespace hash_annotate {

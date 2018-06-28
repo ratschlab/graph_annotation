@@ -1,9 +1,9 @@
 #include "hashers.hpp"
-#include "serialization.hpp"
 
 #include <fstream>
+#include <cyclichash.h>
 
-#include "cyclichash.h"
+#include "../serialization.hpp"
 
 
 namespace hash_annotate {
