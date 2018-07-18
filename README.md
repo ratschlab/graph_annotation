@@ -51,7 +51,7 @@ Wavelet trie statistics
 Compress wavelet tries with random column permutations  
 `./annograph permutation -i <OUTPREFIX> --num-permutations <NUM_PERMS>`
 
-## bioRxiv preprint
+## Reference
 This code was used to produce the results in our paper
 > [_Dynamic compression schemes for graph coloring, Bioinformatics, 2018_](https://doi.org/10.1093/bioinformatics/bty632) by Harun Mustafa, Ingo Schilken, Mikhail Karasikov, Carsten Eickhoff, Gunnar Rätsch, and André Kahles. 
 
