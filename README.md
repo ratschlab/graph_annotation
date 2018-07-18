@@ -52,7 +52,7 @@ Compress wavelet tries with random column permutations
 `./annograph permutation -i <OUTPREFIX> --num-permutations <NUM_PERMS>`
 
 ## bioRxiv preprint
-This code was used to produce the results in our bioRxiv preprint
-> [_Dynamic compression schemes for graph coloring_](https://www.biorxiv.org/content/early/2018/03/17/239806) by Harun Mustafa, Ingo Schilken, Mikhail Karasikov, Carsten Eickhoff, Gunnar Ratsch, and Andre Kahles. 
+This code was used to produce the results in our paper
+> [_Dynamic compression schemes for graph coloring, Bioinformatics, 2018_](https://doi.org/10.1093/bioinformatics/bty632) by Harun Mustafa, Ingo Schilken, Mikhail Karasikov, Carsten Eickhoff, Gunnar Rätsch, and André Kahles. 
 
 The input data used for those experiments is located [here](https://public.bmi.inf.ethz.ch/projects/2018/graph-anno/).
