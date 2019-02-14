@@ -1,5 +1,13 @@
 # Hash-based colored de Bruijn graph with wavelet trie and Bloom filter color compression
 
+### Reference
+This code implements the **wavelet trie** and **corrected Bloom filter** compressors proposed in our paper
+> [_Dynamic compression schemes for graph coloring, Bioinformatics, 2018_](https://doi.org/10.1093/bioinformatics/bty632) by Harun Mustafa, Ingo Schilken, Mikhail Karasikov, Carsten Eickhoff, Gunnar Rätsch, and André Kahles. 
+
+Other methods for representing graph annotations implemented with a more generic API, including **Multi-BRWT**, **Rainbowfish**, as well as Row- and Column-major sparse representations, may be found [here](https://github.com/ratschlab/genome_graph_annotation).
+
+### Install
+
 **Prerequisites**
 - cmake 3.6.1
 - C++14
@@ -8,7 +16,7 @@
 - boost
 - sdsl-lite
 
-### Install
+**Steps**
 1. `git clone --recursive https://github.com/ratschlab/graph_annotation`
 2. Build *sdsl-lite* by `pushd external-libraries/sdsl-lite; ./install.sh $(pwd); popd`
 3. go to the **build** directory `mkdir -p build && cd build`
@@ -51,8 +59,5 @@ Wavelet trie statistics
 Compress wavelet tries with random column permutations  
 `./annograph permutation -i <OUTPREFIX> --num-permutations <NUM_PERMS>`
 
-## Reference
-This code was used to produce the results in our paper
-> [_Dynamic compression schemes for graph coloring, Bioinformatics, 2018_](https://doi.org/10.1093/bioinformatics/bty632) by Harun Mustafa, Ingo Schilken, Mikhail Karasikov, Carsten Eickhoff, Gunnar Rätsch, and André Kahles. 
-
-The input data used for those experiments is located [here](https://public.bmi.inf.ethz.ch/projects/2018/graph-anno/).
+#### Reproducing results from the paper
+The input data for reproducing the results of the experiments in our paper is located [here](https://public.bmi.inf.ethz.ch/projects/2018/graph-anno/).
